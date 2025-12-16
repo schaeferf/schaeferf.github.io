@@ -1,0 +1,975 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+  <title>Aufnahme MKG – Wizard (verschlüsselte QR-Codes)</title>
+
+  <!-- QRCode library (online; for offline later you can inline it) -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+
+  <style>
+    :root { --primary:#004E8A; --bg:#f8f9fa; --card:#fff; --b:#d9dde3; --m:#555; --danger:#b00020; }
+    body { background: var(--bg); font-family: system-ui,-apple-system,Segoe UI,Roboto,Arial,sans-serif; margin:0; color:#111; padding-bottom: 90px; }
+    .app-header { background:#fff; padding: 14px 16px; border-bottom:1px solid var(--b); display:flex; justify-content:space-between; align-items:center; position:sticky; top:0; z-index:20; box-shadow:0 2px 6px rgba(0,0,0,.05); }
+    .brand { font-weight: 900; color: var(--primary); font-size: .98rem; line-height:1.15; }
+    .brand small { font-weight:700; color:#333; }
+    select { border:1px solid var(--b); border-radius:10px; padding:8px; background:#fff; }
+
+    .wizard-container { max-width: 860px; margin: 16px auto; padding: 0 10px; }
+    .top-nav { display:flex; justify-content:space-between; gap:10px; margin-bottom: 12px; }
+    .btn { background: var(--primary); color:#fff; border:0; padding: 10px 16px; border-radius: 10px; font-weight: 900; cursor:pointer; }
+    .btn.back { background:#6c757d; }
+    .btn.secondary { background:#0b5ed7; }
+    .btn:disabled { opacity:0; pointer-events:none; }
+
+    .step-card { background: var(--card); border:1px solid #e9edf3; border-radius: 14px; padding: 18px; box-shadow:0 4px 16px rgba(0,0,0,.03); display:none; }
+    .step-card.active { display:block; animation: fade .18s ease-out; }
+    @keyframes fade { from { opacity:0; transform: translateY(6px);} to {opacity:1; transform: translateY(0);} }
+
+    h4 { margin:0 0 14px; color: var(--primary); border-bottom:2px solid #f0f0f0; padding-bottom:10px; }
+    label { font-weight: 800; font-size: .92rem; margin: 10px 0 6px; display:block; color:#333; }
+    .form-control, .form-select { width:100%; padding: 11px; border-radius: 10px; border:1px solid var(--b); box-sizing:border-box; background:#fff; }
+
+    /* Grid Layout */
+    .row { display:grid; grid-template-columns: repeat(12, 1fr); gap: 12px; align-items:start; }
+    .col-4 { grid-column: span 4; }
+    .col-6 { grid-column: span 6; }
+    .col-8 { grid-column: span 8; }
+    .col-12 { grid-column: span 12; }
+    @media (max-width: 700px){
+      .col-4,.col-6,.col-8 { grid-column: span 12; }
+    }
+
+    .role-card { display:flex; gap:14px; align-items:center; padding: 14px; border:2px solid #eee; border-radius:14px; background:#fff; cursor:pointer; transition:.15s; margin-bottom:10px; }
+    .role-card:hover { transform: translateY(-1px); border-color:#cfd6df; }
+    .role-card.selected { border-color: var(--primary); background:#f0f7ff; }
+    .role-icon { width:44px; height:44px; border-radius:14px; display:grid; place-items:center; font-weight:900; color:var(--primary); background:#eef2f6; }
+    .role-text { font-weight:900; font-size:1.05rem; }
+
+    .legal-box { height: 260px; overflow:auto; background:#fff; border:1px solid var(--b); padding: 12px; font-size: .85rem; white-space: pre-wrap; border-radius: 10px; color:#333; }
+    .check-clean { display:flex; align-items:center; padding: 10px; background:#f9f9f9; border:1px solid #eee; border-radius:10px; margin: 10px 0; }
+    .check-clean input { width:1.3em; height:1.3em; margin-right:12px; }
+    .check-clean label { margin:0; font-weight:800; }
+
+    .hidden{display:none!important}
+    .subpanel{ margin: 8px 0 14px; padding-left:12px; border-left:3px solid #e9edf3; }
+    .subpanel .form-check{ display:flex; align-items:center; gap:10px; margin: 6px 0; }
+    .form-check input{ width:1.2em; height:1.2em; }
+    .hint{ color:var(--m); font-size:.88rem; line-height:1.35; }
+
+    /* QRs untereinander */
+    .qr-wrapper{ display:flex; gap:14px; flex-direction: column; align-items:center; margin-top: 12px; }
+    .qr-item{ background:#fff; border:1px solid var(--b); border-radius:14px; padding: 12px; width: min(520px, 100%); }
+    .qr-caption{ font-weight:900; color:var(--primary); margin-bottom:10px; display:block; }
+    .tiny{ font-size:.82rem; color:var(--m); word-break:break-all; }
+    textarea.mono{ font-family: ui-monospace,Consolas,monospace; min-height:120px; }
+    .err{ color:var(--danger); font-weight:900; margin-top:8px; }
+    .ok{ color:#0a7a2f; font-weight:900; margin-top:8px; }
+    .btn-row{ display:flex; gap:10px; flex-wrap:wrap; margin-top:10px; }
+    .btn-row .btn { flex: 1 0 240px; }
+  </style>
+</head>
+
+<body>
+  <div class="app-header">
+    <div class="brand">Städtisches Klinikum Karlsruhe<br><small>Klinik für Mund-, Kiefer- und Gesichtschirurgie</small></div>
+    <select id="lang">
+      <option value="de" selected>🇩🇪 Deutsch</option>
+      <option value="en">🇬🇧 English</option>
+    </select>
+  </div>
+
+  <div class="wizard-container">
+    <div class="top-nav">
+      <button class="btn back" id="btnBack" type="button" disabled data-t="back">Zurück</button>
+      <button class="btn" id="btnNext" type="button" data-t="next">Weiter</button>
+    </div>
+
+    <div id="step1" class="step-card active">
+      <h4 data-t="welcome">Willkommen</h4>
+      <div class="hint" data-t="enc_hint">
+        Die nachfolgenden Angaben werden automatisch verschlüsselt und als QR-Code gespeichert.
+      </div>
+      <p class="hint" style="margin-top:10px" data-t="role_msg">Bitte wählen Sie Ihre Rolle:</p>
+
+      <div class="role-card selected" id="rc_pat">
+        <div class="role-icon">P</div>
+        <div class="role-text" data-t="pat">Ich bin selbst Patient</div>
+      </div>
+
+      <div class="role-card" id="rc_rep">
+        <div class="role-icon">B</div>
+        <div class="role-text" data-t="rep">Ich bin Angehöriger / Betreuer</div>
+      </div>
+
+      <div class="err" id="cryptoWarn"></div>
+    </div>
+
+    <div id="step2" class="step-card">
+      <h4 data-t="personal">Persönliche Daten</h4>
+      <div class="row">
+        <div class="col-4">
+          <label data-t="salut">Anrede</label>
+          <select id="salut" class="form-select">
+            <option value="" data-t="opt_dash">-</option>
+            <option value="Herr" data-t="salut_mr">Herr</option>
+            <option value="Frau" data-t="salut_ms">Frau</option>
+            <option value="Kind" data-t="salut_child">Kind</option>
+          </select>
+        </div>
+        <div class="col-8">
+          <label data-t="title">Titel</label>
+          <select id="title" class="form-select">
+            <option value="" data-t="opt_dash">-</option>
+            <option value="Dr." data-t="title_dr">Dr.</option>
+            <option value="Prof." data-t="title_prof">Prof.</option>
+          </select>
+        </div>
+      </div>
+
+      <label data-t="fn">Vorname*</label><input type="text" id="fn" class="form-control" autocomplete="given-name">
+      <label data-t="ln">Nachname*</label><input type="text" id="ln" class="form-control" autocomplete="family-name">
+      <label data-t="dob">Geburtsdatum*</label><input type="date" id="dob" class="form-control">
+      <label data-t="email">E-Mail</label><input type="email" id="email" class="form-control" autocomplete="email">
+      <div class="err" id="err2"></div>
+    </div>
+
+    <div id="step3" class="step-card">
+      <h4 data-t="addr">Adresse</h4>
+      <div class="row">
+        <div class="col-8">
+          <label data-t="street">Straße*</label>
+          <input type="text" id="str" class="form-control" autocomplete="street-address">
+        </div>
+        <div class="col-4">
+          <label data-t="hno">Hausnr.*</label>
+          <input type="text" id="hno" class="form-control" placeholder="z.B. 12a">
+        </div>
+
+        <div class="col-4">
+          <label data-t="zip">PLZ*</label>
+          <input type="text" id="zip" class="form-control" autocomplete="postal-code">
+        </div>
+        <div class="col-8">
+          <label data-t="city">Stadt*</label>
+          <input type="text" id="city" class="form-control" autocomplete="address-level2">
+        </div>
+      </div>
+      <div class="err" id="err3"></div>
+    </div>
+
+    <div id="step4" class="step-card">
+      <h4 data-t="ins">Versicherung</h4>
+
+      <div class="check-clean" style="background:#fff">
+        <input type="checkbox" id="selfpayer">
+        <label for="selfpayer" data-t="self">Ich bin Selbstzahler</label>
+      </div>
+
+      <div id="ins_box">
+        <label data-t="type">Art der Versicherung</label>
+        <select id="ins_type" class="form-select">
+          <option value="gkv" data-t="gkv">Gesetzlich (GKV)</option>
+          <option value="pkv" data-t="pkv">Privat (PKV)</option>
+          <option value="oth" data-t="oth">Sonstige</option>
+        </select>
+
+        <label data-t="kasse">Name der Kasse</label>
+        <input type="text" id="ins_name" class="form-control" list="kassen_gkv">
+        <datalist id="kassen_gkv"></datalist>
+        <datalist id="kassen_pkv"></datalist>
+        <datalist id="kassen_oth"></datalist>
+
+        <div id="gkv_panel">
+          <label data-t="stat">Status</label>
+          <select id="gkv_stat" class="form-select">
+            <option value="Mitglied" data-t="member">Mitglied</option>
+            <option value="Familie" data-t="family">Familienversichert</option>
+          </select>
+          <div class="check-clean" style="margin-top:8px">
+            <input type="checkbox" id="gkv_add">
+            <label for="gkv_add" data-t="add">Zusatzversicherung vorhanden</label>
+          </div>
+        </div>
+
+        <div id="pkv_panel" class="hidden">
+          <label data-t="tariff">Tarif</label><input type="text" id="pkv_tar" class="form-control">
+          <div class="check-clean"><input type="checkbox" id="pkv_bei"><label for="pkv_bei" data-t="beihilfe">Beihilfe</label></div>
+        </div>
+      </div>
+    </div>
+
+    <div id="step5" class="step-card">
+      <h4 data-t="dis">Erkrankungen</h4>
+      <p class="hint" data-t="dis_hint">Bitte anklicken zum Aufklappen:</p>
+
+      <div class="check-clean">
+        <input type="checkbox" class="main-c" id="c_heart">
+        <label for="c_heart" data-t="d_heart">Herz / Kreislauf</label>
+      </div>
+      <div id="sub_heart" class="subpanel hidden">
+        <div class="form-check"><input class="sub-c" id="sc_bp" type="checkbox" value="Bluthochdruck"><label for="sc_bp" data-t="d_bp">Bluthochdruck</label></div>
+        <div class="form-check"><input class="sub-c" id="sc_inf" type="checkbox" value="Herzinfarkt"><label for="sc_inf" data-t="d_infarct">Herzinfarkt</label></div>
+        <div class="form-check"><input class="sub-c" id="sc_str" type="checkbox" value="Schlaganfall"><label for="sc_str" data-t="d_stroke">Schlaganfall</label></div>
+        <div class="form-check"><input class="sub-c" id="sc_val" type="checkbox" value="Herzklappe"><label for="sc_val" data-t="d_valve">Herzklappe</label></div>
+
+        <label style="color:var(--danger);font-weight:900;margin-top:10px" data-t="blood">Blutverdünner?</label>
+        <select class="form-select" id="sel_thinner">
+          <option value="" data-t="opt_dash">-</option>
+          <option value="Marcumar" data-t="th_mar">Marcumar</option>
+          <option value="Eliquis" data-t="th_eli">Eliquis</option>
+          <option value="Xarelto" data-t="th_xar">Xarelto</option>
+          <option value="ASS 100" data-t="th_ass">ASS 100</option>
+        </select>
+      </div>
+
+      <div class="check-clean">
+        <input type="checkbox" class="main-c" id="c_tumor">
+        <label for="c_tumor" data-t="d_tum">Tumorerkrankung</label>
+      </div>
+      <div id="sub_tumor" class="subpanel hidden">
+        <div class="form-check"><input class="sub-c" id="sc_rad" type="checkbox" value="Bestrahlung Kopf/Hals"><label for="sc_rad" style="color:var(--danger);font-weight:900" data-t="d_rad">Bestrahlung Kopf/Hals</label></div>
+        <label style="color:var(--danger);font-weight:900;margin-top:10px" data-t="q_bone">Antiresorptiva?</label>
+        <select class="form-select" id="sel_bone">
+          <option value="" data-t="opt_dash">-</option>
+          <option value="Zometa" data-t="bone_zom">Zometa</option>
+          <option value="Xgeva" data-t="bone_xge">Xgeva</option>
+          <option value="Prolia" data-t="bone_pro">Prolia</option>
+        </select>
+      </div>
+
+      <div class="check-clean">
+        <input type="checkbox" class="main-c" id="c_infec">
+        <label for="c_infec" data-t="d_inf">Infektionskrankheit</label>
+      </div>
+      <div id="sub_inf" class="subpanel hidden">
+        <select id="inf_sel" class="form-select">
+          <option value="" data-t="opt_dash">-</option>
+          <option value="HIV">HIV</option>
+          <option value="Hep B">Hep B</option>
+          <option value="Hep C">Hep C</option>
+          <option value="MRSA">MRSA</option>
+        </select>
+      </div>
+
+      <div class="check-clean">
+        <input type="checkbox" class="main-c" id="c_dia">
+        <label for="c_dia" data-t="d_dia">Diabetes</label>
+      </div>
+      <div id="sub_dia" class="subpanel hidden">
+        <label data-t="hba1c_lbl">HbA1c</label><input id="hba1c" class="form-control">
+        <label data-t="meds">Medikamente</label>
+        <select class="form-select" id="sel_dia_meds">
+          <option value="" data-t="opt_dash">-</option>
+          <option value="Metformin" data-t="dia_met">Metformin</option>
+          <option value="Insulin" data-t="dia_ins">Insulin</option>
+        </select>
+      </div>
+
+      <div class="check-clean">
+        <input type="checkbox" class="main-c" id="c_all">
+        <label for="c_all" data-t="d_all">Allergien / Unverträglichkeiten</label>
+      </div>
+      <div id="sub_all" class="subpanel hidden">
+        <div class="form-check"><input class="sub-c" id="al_pen" type="checkbox" value="Allergie: Penicillin/β-Laktame"><label for="al_pen" data-t="al_pen">Penicillin / β-Laktame</label></div>
+        <div class="form-check"><input class="sub-c" id="al_la" type="checkbox" value="Allergie: Lokalanästhetika"><label for="al_la" data-t="al_la">Lokalanästhetika</label></div>
+        <div class="form-check"><input class="sub-c" id="al_iod" type="checkbox" value="Allergie: Jod/Kontrastmittel"><label for="al_iod" data-t="al_iod">Jod / Kontrastmittel</label></div>
+        <div class="form-check"><input class="sub-c" id="al_lat" type="checkbox" value="Allergie: Latex"><label for="al_lat" data-t="al_lat">Latex</label></div>
+        <div class="form-check"><input class="sub-c" id="al_chx" type="checkbox" value="Allergie: Chlorhexidin"><label for="al_chx" data-t="al_chx">Chlorhexidin</label></div>
+        <label data-t="al_free">Freitext (Allergien)</label>
+        <textarea id="all_txt" class="form-control mono" placeholder="z.B. Analgetika, Antibiotika, Pflaster, Metalle …"></textarea>
+      </div>
+
+      <label style="margin-top:14px" data-t="misc_free">Sonstiges (Freitext)</label>
+      <textarea id="diag_txt" class="form-control mono" placeholder="Besonderheiten, OP-Risiken …"></textarea>
+    </div>
+
+    <div id="step6" class="step-card">
+      <h4 data-t="meds_title">Medikamente</h4>
+      <div class="check-clean">
+        <input type="checkbox" id="m_plan">
+        <label for="m_plan" data-t="plan_exists">Medikamentenplan liegt vor</label>
+      </div>
+      <label data-t="med_list">Liste</label>
+      <textarea id="meds_txt" class="form-control mono" placeholder="Medikamente als Text …"></textarea>
+    </div>
+
+    <div id="step7" class="step-card">
+      <h4 data-t="priv">Datenschutz</h4>
+
+      <label data-t="legal_1">1. Datenschutzhinweise</label>
+      <div class="legal-box" id="lt1"></div>
+      <div class="check-clean">
+        <input type="checkbox" id="chk_priv">
+        <label for="chk_priv" class="err" data-t="agree">Ich stimme zu (Pflicht)</label>
+      </div>
+
+      <label data-t="legal_2">2. Datenanforderung (Klinik)</label>
+      <div class="legal-box" id="lt2"></div>
+      <div class="check-clean">
+        <input type="checkbox" id="chk_req">
+        <label for="chk_req" class="err" data-t="agree">Ich stimme zu (Pflicht)</label>
+      </div>
+
+      <label data-t="legal_3">3. Übermittlung</label>
+      <div class="legal-box" id="lt3"></div>
+
+      <label style="margin-top:14px;"><input type="checkbox" id="share_gp"> <span data-t="gp">Hausarzt</span></label>
+      <input type="text" id="gp_name" class="form-control" placeholder="Name/Ort">
+
+      <label style="margin-top:10px;"><input type="checkbox" id="share_dent"> <span data-t="dent">Zahnarzt</span></label>
+      <input type="text" id="dent_name" class="form-control" placeholder="Name/Ort">
+
+      <label style="margin-top:10px;"><input type="checkbox" id="share_ref"> <span data-t="ref">Überweiser</span></label>
+      <input type="text" id="ref_name" class="form-control" placeholder="Name/Ort">
+
+      <div class="err" id="err7"></div>
+    </div>
+
+    <div id="step8" class="step-card">
+      <h4 data-t="thx">Vielen Dank!</h4>
+
+      <div class="row">
+        <div class="col-6">
+          <label data-t="qr_size">QR-Größe (px)</label>
+          <input id="qrSize" class="form-control" type="number" min="180" max="900" value="380">
+        </div>
+        <div class="col-6">
+          <label data-t="split_len">Split-Länge pro Teil</label>
+          <input id="chunkLen" class="form-control" type="number" min="200" max="2000" value="900">
+        </div>
+
+        <div class="col-6">
+          <label data-t="ecc_lbl">Fehlerkorrektur</label>
+          <select id="ecc" class="form-select">
+            <option value="L" data-t="ecc_l">L</option>
+            <option value="M" data-t="ecc_m" selected>M</option>
+            <option value="Q" data-t="ecc_q">Q</option>
+            <option value="H" data-t="ecc_h">H</option>
+          </select>
+        </div>
+        <div class="col-6">
+          <label data-t="qr_mode">QR-Modus</label>
+          <select id="qrMode" class="form-select">
+            <option value="auto" data-t="mode_auto" selected>Auto (Single wenn möglich, sonst Split)</option>
+            <option value="single" data-t="mode_single">Erzwinge EINEN großen QR (kann scheitern)</option>
+            <option value="split" data-t="mode_split">Immer Split (zuverlässiger)</option>
+          </select>
+        </div>
+      </div>
+
+      <div class="btn-row">
+        <button class="btn secondary" id="btnMakeQR" type="button" data-t="make_qr">🔐 Verschlüsselte QR erzeugen</button>
+        <button class="btn" id="btnPrintQR" type="button" data-t="print_qr">🖨️ QR-Codes drucken</button>
+      </div>
+
+      <div class="hint" id="qrInfo" style="margin-top:10px"></div>
+      <div class="err" id="qrErr"></div>
+      <div class="ok" id="qrOk"></div>
+
+      <div class="qr-wrapper" id="qrBlock">
+        <div class="qr-item">
+          <span class="qr-caption" data-t="qr_person">1. Person (verschlüsselt)</span>
+          <div id="qrP"></div>
+          <div class="tiny" id="qrPmeta"></div>
+        </div>
+        <div class="qr-item">
+          <span class="qr-caption" data-t="qr_med">2. Medizin (verschlüsselt)</span>
+          <div id="qrM"></div>
+          <div class="tiny" id="qrMmeta"></div>
+        </div>
+      </div>
+
+      <label style="margin-top:14px" data-t="dbg">Debug (Payloads)</label>
+      <textarea id="payloadDbg" class="form-control mono" readonly></textarea>
+    </div>
+  </div>
+
+<script>
+/* --- Legal texts: DE + EN (voll) --- */
+const LEGAL = {
+  de: {
+    t1: `Informationen zum Datenschutz und Erlaubnis zur Datenübermittlung
+Datenschutzhinweise: Sehr geehrte Patienten, die im Mai 2018 in Kraft getretene neue EU-Datenschutz-Grundverordnung (EUDSGVO) will eine größtmögliche Transparenz über die Verarbeitung von personenbezogenen Daten erreichen. Sie verpflichtet uns, Sie darüber zu informieren, dass Ihre personenbezogenen Daten im klinikinternen Informations- und Patientenverwaltungssystem verwendet und gespeichert werden. Die Erhebung und Speicherung der Daten ist für die Behandlung gemäß Art. 6 Abs. 1 b) EU-DSGVO notwendig. Ohne die Erhebung und Speicherung der Daten ist die Behandlung nicht möglich.
+Die von Ihnen erhobenen und gespeicherten Gesundheitsdaten sind besondere Daten, deren Berechtigung zur Verarbeitung aus Art. 9 Abs. 2 h) EU-DSGVO folgt.
+Dieses trifft auch für die bei Ihnen erhobenen Befunde, Röntgenbilder und Sonografien zu. Wir sind verpflichtet auch aus Gründen der Qualitätssicherung bestimmte Erkrankungen und Behandlungen fotografisch zu dokumentieren. Sie erklären sich damit einverstanden, dass Fotografien und Daten für Lehre, Forschung und Publikationen anonymisiert verwendet werden.
+Für Ihre Behandlung ist es unabdingbar, dass Ihre Daten im Falle einer Inanspruchnahme auch an interne Kooperationspartner wie die Pathologie, das klinische Labor oder die Mikrobiologie des Klinikums, bei besonderen Anfragen und Anforderungen auch an externe Partner wie zahntechnische Labore oder Industrieunternehmen zur Anfertigung von z.B. 3-dimensionalen Planungsund Operationsmodellen weitergegeben werden.
+Datenschutzverantwortlich sind die Geschäftsführung und in bestimmten Punkten der Klinikdirektor Herr Prof. Dr. Dr. (H) Anton Dunsche. Datenschutzbeauftragter des Städtischen Klinikums Karlsruhe ist Herr Daniel Ullrich. Näheres dazu und seine Erreichbarkeit entnehmen Sie der Homepage des Klinikums.`,
+    t2: `II. Datenübermittlung an das Krankenhaus
+Ferner bin ich damit einverstanden, dass die Klinik als Behandelnde bei vor- und mitbehandelnden Ärzten, wie den oben genannten, aber auch von anderen Leistungserbringern, Vor-, Nach- und Mitbehandelnden, die Befunde im Zusammenhang mit meiner aktuellen Erkrankung bei mir erstellt haben, Behandlungsdaten und Befunde, soweit diese für meine Behandlung sowie zum Zwecke der Dokumentation der Nachbehandlung/Nachsorge und Vervollständigung der Akte erforderlich sind, anfordern darf.
+Die um Auskunft ersuchten Ärzte entbinde ich insoweit von der Schweigepflicht und ich bin damit einverstanden, dass dieses Dokument als Nachweis der eingeholten Einwilligung an die „übermittelnde Stelle“ übersandt werden darf.`,
+    t3: `I. Datenübermittlung an andere Leistungserbringer
+Ich bin damit einverstanden, dass das Krankenhaus die mich betreffenden Behandlungsdaten und Befunde, einschließlich Bilddaten auf z.B. postalischem Weg, per Telefax, verschlüsselter E-Mail, E-Mail-Verfahren der KIM Telematikinfrastruktur oder sonstigen Kommunikationsportalen an die nachfolgend aufgeführten Leistungserbringer übermitteln darf. Der Übermittlungsweg darf durch uns frei gewählt werden.`
+  },
+  en: {
+    t1: `Data protection information and permission to transfer data
+Privacy notice: Dear patients, the EU General Data Protection Regulation (GDPR), which entered into force in May 2018, aims to achieve the greatest possible transparency regarding the processing of personal data. We are obliged to inform you that your personal data will be used and stored in the hospital’s internal information and patient management systems. The collection and storage of these data are necessary for treatment pursuant to Art. 6(1)(b) GDPR. Without collection and storage, treatment is not possible.
+The health data collected and stored are special categories of personal data; the legal basis for processing follows from Art. 9(2)(h) GDPR.
+This also applies to findings, X-ray images and sonography results collected from you. For quality assurance reasons, we are also obliged to document certain diseases and treatments photographically. You agree that photographs and data may be used in an anonymised form for teaching, research and publications.
+For your treatment it is essential that, if you make use of our services, your data may also be forwarded to internal cooperation partners such as pathology, the hospital laboratory or microbiology; and, in the case of special requests and requirements, also to external partners such as dental laboratories or industry partners for the production of e.g. 3-dimensional planning and surgical models.
+Responsibility for data protection lies with the hospital management and, in certain aspects, with the head of department, Prof. Dr. Dr. (H) Anton Dunsche. The data protection officer of Städtisches Klinikum Karlsruhe is Mr Daniel Ullrich. Further details and contact information can be found on the hospital’s website.`,
+    t2: `II. Transfer of data to the hospital
+Furthermore, I agree that the clinic, as the treating provider, may request treatment data and findings from physicians involved in pre-treatment, co-treatment or follow-up treatment (including those named above) as well as from other healthcare providers who have created findings in connection with my current condition, insofar as these are required for my treatment and for documentation of follow-up care and completion of my medical record.
+To this extent, I release the physicians asked to provide information from their duty of confidentiality, and I agree that this document may be sent to the “transmitting entity” as evidence of the consent obtained.`,
+    t3: `I. Transfer of data to other healthcare providers
+I agree that the hospital may transmit treatment data and findings relating to me, including imaging data, to the healthcare providers listed below, for example by post, fax, encrypted email, email procedures of the KIM telematics infrastructure, or other communication portals. The hospital may choose the transmission method.`
+  }
+};
+
+const I18N = {
+  de: {
+    back:"Zurück", next:"Weiter",
+    welcome:"Willkommen",
+    enc_hint:"Die nachfolgenden Angaben werden automatisch verschlüsselt und als QR-Code gespeichert.",
+    role_msg:"Bitte wählen Sie Ihre Rolle:",
+    pat:"Ich bin selbst Patient", rep:"Ich bin Angehöriger / Betreuer",
+    personal:"Persönliche Daten", salut:"Anrede", title:"Titel", fn:"Vorname*", ln:"Nachname*", dob:"Geburtsdatum*", email:"E-Mail",
+    salut_mr:"Herr", salut_ms:"Frau", salut_child:"Kind",
+    addr:"Adresse", street:"Straße*", hno:"Hausnr.*", zip:"PLZ*", city:"Stadt*",
+    ins:"Versicherung", self:"Ich bin Selbstzahler", type:"Art der Versicherung", kasse:"Name der Kasse",
+    gkv:"Gesetzlich (GKV)", pkv:"Privat (PKV)", oth:"Sonstige",
+    stat:"Status", member:"Mitglied", family:"Familienversichert", add:"Zusatzversicherung vorhanden",
+    tariff:"Tarif", beihilfe:"Beihilfe",
+    dis:"Erkrankungen", dis_hint:"Bitte anklicken zum Aufklappen:",
+    d_heart:"Herz / Kreislauf", d_bp:"Bluthochdruck", d_infarct:"Herzinfarkt", d_stroke:"Schlaganfall", d_valve:"Herzklappe", blood:"Blutverdünner?",
+    d_tum:"Tumorerkrankung", d_rad:"Bestrahlung Kopf/Hals", q_bone:"Antiresorptiva?",
+    d_inf:"Infektionskrankheit", d_dia:"Diabetes", hba1c_lbl:"HbA1c",
+    d_all:"Allergien / Unverträglichkeiten",
+    al_pen:"Penicillin / β-Laktame", al_la:"Lokalanästhetika", al_iod:"Jod / Kontrastmittel", al_lat:"Latex", al_chx:"Chlorhexidin",
+    al_free:"Freitext (Allergien)",
+    misc_free:"Sonstiges (Freitext)",
+    meds:"Medikamente", meds_title:"Medikamente", plan_exists:"Medikamentenplan liegt vor", med_list:"Liste",
+    priv:"Datenschutz", legal_1:"1. Datenschutzhinweise", legal_2:"2. Datenanforderung (Klinik)", legal_3:"3. Übermittlung",
+    agree:"Ich stimme zu (Pflicht)",
+    gp:"Hausarzt", dent:"Zahnarzt", ref:"Überweiser",
+    thx:"Vielen Dank!",
+    qr_size:"QR-Größe (px)", split_len:"Split-Länge pro Teil", ecc_lbl:"Fehlerkorrektur", qr_mode:"QR-Modus",
+    mode_auto:"Auto (Single wenn möglich, sonst Split)", mode_single:"Erzwinge EINEN großen QR (kann scheitern)", mode_split:"Immer Split (zuverlässiger)",
+    make_qr:"🔐 Verschlüsselte QR erzeugen", print_qr:"🖨️ QR-Codes drucken",
+    qr_person:"1. Person (verschlüsselt)", qr_med:"2. Medizin (verschlüsselt)",
+    dbg:"Debug (Payloads)",
+    opt_dash:"-",
+    ecc_l:"L", ecc_m:"M", ecc_q:"Q", ecc_h:"H",
+    th_mar:"Marcumar", th_eli:"Eliquis", th_xar:"Xarelto", th_ass:"ASS 100",
+    bone_zom:"Zometa", bone_xge:"Xgeva", bone_pro:"Prolia",
+    dia_met:"Metformin", dia_ins:"Insulin"
+  },
+  en: {
+    back:"Back", next:"Next",
+    welcome:"Welcome",
+    enc_hint:"The following information is automatically encrypted and stored in a QR code.",
+    role_msg:"Please choose your role:",
+    pat:"I am the patient", rep:"I am a representative",
+    personal:"Personal details", salut:"Salutation", title:"Title", fn:"First name*", ln:"Last name*", dob:"Date of birth*", email:"Email",
+    salut_mr:"Mr", salut_ms:"Ms", salut_child:"Child",
+    addr:"Address", street:"Street*", hno:"House no.*", zip:"ZIP*", city:"City*",
+    ins:"Insurance", self:"I am self-paying", type:"Insurance type", kasse:"Insurer",
+    gkv:"Public (statutory)", pkv:"Private", oth:"Other",
+    stat:"Status", member:"Member", family:"Family insured", add:"Supplementary insurance",
+    tariff:"Tariff", beihilfe:"Civil servant aid",
+    dis:"Medical conditions", dis_hint:"Tap to expand:",
+    d_heart:"Heart / circulation", d_bp:"High blood pressure", d_infarct:"Heart attack", d_stroke:"Stroke", d_valve:"Heart valve", blood:"Blood thinner?",
+    d_tum:"Tumor disease", d_rad:"Radiation head/neck", q_bone:"Antiresorptives?",
+    d_inf:"Infection", d_dia:"Diabetes", hba1c_lbl:"HbA1c",
+    d_all:"Allergies / intolerances",
+    al_pen:"Penicillin / β-lactams", al_la:"Local anesthetics", al_iod:"Iodine / contrast agents", al_lat:"Latex", al_chx:"Chlorhexidine",
+    al_free:"Free text (allergies)",
+    misc_free:"Other (free text)",
+    meds:"Medication", meds_title:"Medication", plan_exists:"Medication plan available", med_list:"List",
+    priv:"Privacy", legal_1:"1. Privacy notice", legal_2:"2. Data request", legal_3:"3. Transfer",
+    agree:"I agree (required)",
+    gp:"GP", dent:"Dentist", ref:"Referrer",
+    thx:"Thank you!",
+    qr_size:"QR size (px)", split_len:"Split length per part", ecc_lbl:"Error correction", qr_mode:"QR mode",
+    mode_auto:"Auto (single if possible, else split)", mode_single:"Force ONE large QR (may fail)", mode_split:"Always split (more reliable)",
+    make_qr:"🔐 Generate encrypted QRs", print_qr:"🖨️ Print QR codes",
+    qr_person:"1. Person (encrypted)", qr_med:"2. Medical (encrypted)",
+    dbg:"Debug (payloads)",
+    opt_dash:"-",
+    ecc_l:"L", ecc_m:"M", ecc_q:"Q", ecc_h:"H",
+    th_mar:"Marcumar", th_eli:"Eliquis", th_xar:"Xarelto", th_ass:"Aspirin 100",
+    bone_zom:"Zometa", bone_xge:"Xgeva", bone_pro:"Prolia",
+    dia_met:"Metformin", dia_ins:"Insulin"
+  }
+};
+
+/* Public JWK (RSA-OAEP-256) */
+const PUBLIC_JWK = {
+  "alg":"RSA-OAEP-256",
+  "e":"AQAB",
+  "ext":true,
+  "key_ops":["encrypt"],
+  "kty":"RSA",
+  "n":"2HSl6bXIWppjZYvbHZb2ZpEV8dWWkQXiBKqpUHhFA4_w86Z3ta3nqf2zJWdAxrmpSYgmk-Hpw7vAFJEXMYa3v76lMPTiDl2ht9173WH5Bk9GEM-QH60ZZj78bBxSXWv4r3F2d15GHthmtwqWZZqBkq4CT0EOnBkQZsv8m8BoFPcikOYxYJyeVFGv9Xe_Z77925hHBhFWakTlC_qlFHUMf6fcHhCLVbnmhXwTezkkvRbMHjSDOxUxVgQ6Sujbb4MClVEH79Eu__RpNg2gq0YzyHz0huWPvxeIX_PoUApQBDOyN4sBQpO2A_dhmnTN9y9bOhPnujRhntmd-ZsvnAuazQ"
+};
+
+/* Kassenlisten */
+const GKV_LIST = ["AOK", "Techniker Krankenkasse (TK)", "Barmer", "DAK-Gesundheit", "IKK classic", "KKH", "hkk", "SBK", "BKK"];
+const PKV_LIST = ["Debeka", "Allianz Private Krankenversicherung", "AXA", "DKV", "HUK-COBURG PKV", "Signal Iduna", "Barmenia", "HanseMerkur", "Gothaer", "R+V", "Continentale"];
+const OTH_LIST = ["Auslandsversicherung", "BG/Unfallversicherung", "Sozialamt/Asyl", "Sonstige"];
+
+/* Base64URL */
+const B64U = {
+  encBytes(bytes){
+    let bin="", chunk=0x8000;
+    for(let i=0;i<bytes.length;i+=chunk){
+      bin += String.fromCharCode.apply(null, bytes.subarray(i,i+chunk));
+    }
+    return btoa(bin).replace(/\+/g,'-').replace(/\//g,'_').replace(/=+$/,'');
+  }
+};
+
+async function importPublicKey(){
+  return crypto.subtle.importKey("jwk", PUBLIC_JWK, { name:"RSA-OAEP", hash:"SHA-256" }, false, ["encrypt"]);
+}
+
+async function hybridEncryptJSON(publicKey, obj){
+  const json = JSON.stringify(obj);
+  const pt = new TextEncoder().encode(json);
+
+  const aesKeyBytes = crypto.getRandomValues(new Uint8Array(32));
+  const iv = crypto.getRandomValues(new Uint8Array(12));
+  const aesKey = await crypto.subtle.importKey("raw", aesKeyBytes, {name:"AES-GCM"}, false, ["encrypt"]);
+
+  const ct = new Uint8Array(await crypto.subtle.encrypt({name:"AES-GCM", iv}, aesKey, pt));
+  const encKey = new Uint8Array(await crypto.subtle.encrypt({name:"RSA-OAEP"}, publicKey, aesKeyBytes));
+
+  return { k: B64U.encBytes(encKey), iv: B64U.encBytes(iv), ct: B64U.encBytes(ct) };
+}
+
+const App = {
+  step: 1,
+  role: "pat",
+  pubKey: null,
+  lastPayloadP: "",
+  lastPayloadM: "",
+
+  init(){
+    const warn = document.getElementById("cryptoWarn");
+    if(!window.isSecureContext || !crypto?.subtle){
+      warn.textContent = "Hinweis: Für Verschlüsselung ist HTTPS (oder localhost) nötig.";
+    } else warn.textContent = "";
+
+    this.fillDatalists();
+    this.setLang();
+    this.toggleIns();
+    this.syncInsList();
+
+    importPublicKey().then(k => this.pubKey = k).catch(() => this.pubKey = null);
+  },
+
+  setLang(){
+    const lang = document.getElementById("lang").value;
+    const t = I18N[lang] || I18N.de;
+
+    document.querySelectorAll("[data-t]").forEach(el=>{
+      const k = el.getAttribute("data-t");
+      if(t[k]) el.textContent = t[k];
+    });
+
+    const L = LEGAL[lang] || LEGAL.de;
+    document.getElementById("lt1").innerText = L.t1;
+    document.getElementById("lt2").innerText = L.t2;
+    document.getElementById("lt3").innerText = L.t3;
+  },
+
+  fillDatalists(){
+    const gkv = document.getElementById("kassen_gkv");
+    const pkv = document.getElementById("kassen_pkv");
+    const oth = document.getElementById("kassen_oth");
+    gkv.innerHTML = ""; pkv.innerHTML = ""; oth.innerHTML = "";
+    GKV_LIST.forEach(k=>{ const o=document.createElement("option"); o.value=k; gkv.appendChild(o); });
+    PKV_LIST.forEach(k=>{ const o=document.createElement("option"); o.value=k; pkv.appendChild(o); });
+    OTH_LIST.forEach(k=>{ const o=document.createElement("option"); o.value=k; oth.appendChild(o); });
+  },
+
+  syncInsList(){
+    const t = document.getElementById("ins_type").value;
+    const input = document.getElementById("ins_name");
+    if(t === "gkv") input.setAttribute("list", "kassen_gkv");
+    else if(t === "pkv") input.setAttribute("list", "kassen_pkv");
+    else input.setAttribute("list", "kassen_oth");
+  },
+
+  nav(dir){
+    document.getElementById("step"+this.step).classList.remove("active");
+    this.step += dir;
+    document.getElementById("step"+this.step).classList.add("active");
+    document.getElementById("btnBack").disabled = (this.step===1);
+    document.getElementById("btnNext").style.display = (this.step===8) ? "none" : "inline-block";
+    window.scrollTo(0,0);
+  },
+
+  validate(){
+    const v = id => document.getElementById(id).value.trim();
+    const err2 = document.getElementById("err2");
+    const err3 = document.getElementById("err3");
+    const err7 = document.getElementById("err7");
+    err2.textContent=""; err3.textContent=""; err7.textContent="";
+
+    if(this.step===2 && (!v("fn") || !v("ln") || !v("dob"))){ err2.textContent="Pflichtfelder fehlen."; return; }
+    if(this.step===3 && (!v("str") || !v("hno") || !v("zip") || !v("city"))){ err3.textContent="Adresse unvollständig."; return; }
+    if(this.step===7 && (!document.getElementById("chk_priv").checked || !document.getElementById("chk_req").checked)){
+      err7.textContent="Zustimmung fehlt."; return;
+    }
+    this.nav(1);
+  },
+
+  setRole(r){
+    this.role = r;
+    document.getElementById("rc_pat").classList.toggle("selected", r==="pat");
+    document.getElementById("rc_rep").classList.toggle("selected", r==="rep");
+  },
+
+  toggle(id){ document.getElementById(id).classList.toggle("hidden"); },
+
+  toggleIns(){
+    const self = document.getElementById("selfpayer").checked;
+    document.getElementById("ins_box").classList.toggle("hidden", self);
+    if(!self){
+      const t = document.getElementById("ins_type").value;
+      document.getElementById("gkv_panel").classList.toggle("hidden", t!=="gkv");
+      document.getElementById("pkv_panel").classList.toggle("hidden", t!=="pkv");
+      this.syncInsList();
+    }
+  },
+
+  addMedToText(val){
+    if(!val) return;
+    const box = document.getElementById("meds_txt");
+    if(!box.value.includes(val)) box.value += (box.value ? ", " : "") + val;
+  },
+
+  collect(){
+    const v = id => document.getElementById(id).value.trim();
+    const c = id => document.getElementById(id).checked;
+
+    const diagnoses = [];
+    document.querySelectorAll(".sub-c:checked").forEach(e=>diagnoses.push(e.value));
+
+    const inf = document.getElementById("inf_sel").value;
+    if(inf) diagnoses.push("Infekt:"+inf);
+
+    const hba1c = v("hba1c");
+    if(hba1c) diagnoses.push("HbA1c:"+hba1c);
+
+    const allFree = v("all_txt");
+    if(allFree) diagnoses.push("Allergie/Freitext:"+allFree);
+
+    const misc = v("diag_txt");
+    if(misc) diagnoses.push("Freitext:"+misc);
+
+    const person = {
+      role:this.role,
+      salut:v("salut"),
+      title:v("title"),
+      fn:v("fn"),
+      ln:v("ln"),
+      dob:v("dob"),
+      email:v("email"),
+      street:v("str"),
+      hno:v("hno"),
+      zip:v("zip"),
+      city:v("city")
+    };
+
+    const insurance = {
+      self: c("selfpayer") ? 1 : 0,
+      type: c("selfpayer") ? "self" : v("ins_type"),
+      name: v("ins_name"),
+      gkv_stat: v("gkv_stat"),
+      gkv_add: c("gkv_add") ? 1 : 0,
+      pkv_tar: v("pkv_tar"),
+      pkv_bei: c("pkv_bei") ? 1 : 0
+    };
+
+    const medical = {
+      diagnoses,
+      meds_plan: c("m_plan") ? 1 : 0,
+      meds_text: v("meds_txt")
+    };
+
+    const consents = {
+      priv: c("chk_priv") ? 1 : 0,
+      req: c("chk_req") ? 1 : 0,
+      share_gp: c("share_gp") ? 1 : 0, gp_name: v("gp_name"),
+      share_dent: c("share_dent") ? 1 : 0, dent_name: v("dent_name"),
+      share_ref: c("share_ref") ? 1 : 0, ref_name: v("ref_name")
+    };
+
+    return {
+      meta:{ v:1, ts:new Date().toISOString(), lang: document.getElementById("lang").value },
+      person, insurance, medical, consents
+    };
+  },
+
+  qrLevel(){
+    const ecc = document.getElementById("ecc").value;
+    return {L:QRCode.CorrectLevel.L,M:QRCode.CorrectLevel.M,Q:QRCode.CorrectLevel.Q,H:QRCode.CorrectLevel.H}[ecc] || QRCode.CorrectLevel.M;
+  },
+
+  splitInto(str, maxLen){
+    const out=[]; for(let i=0;i<str.length;i+=maxLen) out.push(str.slice(i,i+maxLen)); return out;
+  },
+
+  randId(){
+    const b = new Uint8Array(10); crypto.getRandomValues(b);
+    return B64U.encBytes(b);
+  },
+
+  renderQR(targetDiv, payload, typeLabel, metaDiv){
+    const size = Math.max(180, Math.min(900, parseInt(document.getElementById("qrSize").value || "380",10)));
+    const chunkLen = Math.max(200, Math.min(2000, parseInt(document.getElementById("chunkLen").value || "900",10)));
+    const mode = document.getElementById("qrMode").value;
+
+    targetDiv.innerHTML = "";
+    metaDiv.textContent = "";
+
+    const renderSingle = () => {
+      new QRCode(targetDiv, { text: payload, width:size, height:size, correctLevel:this.qrLevel() });
+      metaDiv.textContent = `Single · Länge ${payload.length}`;
+      return {split:false, parts:1};
+    };
+
+    const needSplit = (mode==="split") || (mode==="auto" && payload.length > chunkLen);
+
+    if(!needSplit){
+      return renderSingle();
+    }
+
+    const id = this.randId();
+    const chunks = this.splitInto(payload, chunkLen);
+    const total = chunks.length;
+
+    chunks.forEach((chunk, i)=>{
+      const line = `MKG3S|${typeLabel}|${id}|${i+1}|${total}|${chunk}`;
+      const child = document.createElement("div");
+      child.style.marginBottom = "10px";
+      targetDiv.appendChild(child);
+      new QRCode(child, { text: line, width:size, height:size, correctLevel:this.qrLevel() });
+    });
+
+    metaDiv.textContent = `Split · ID ${id} · Teile ${total} · Payload-Länge ${payload.length}`;
+    return {split:true, parts:total, id};
+  },
+
+  async generateEncryptedQRs(){
+    const qrErr = document.getElementById("qrErr");
+    const qrOk = document.getElementById("qrOk");
+    const qrInfo = document.getElementById("qrInfo");
+    qrErr.textContent = ""; qrOk.textContent = ""; qrInfo.textContent = "";
+
+    if(!crypto?.subtle){
+      qrErr.textContent = "WebCrypto nicht verfügbar. Das funktioniert nur in modernen Browsern + HTTPS.";
+      return;
+    }
+
+    if(!this.pubKey){
+      try { this.pubKey = await importPublicKey(); }
+      catch(e){ qrErr.textContent = "Public Key Import fehlgeschlagen."; return; }
+    }
+
+    const data = this.collect();
+
+    const encP = await hybridEncryptJSON(this.pubKey, { meta:data.meta, person:data.person });
+    const encM = await hybridEncryptJSON(this.pubKey, { meta:data.meta, insurance:data.insurance, medical:data.medical, consents:data.consents });
+
+    const payloadP = `MKG3|P|v1|hyb|${encP.k}|${encP.iv}|${encP.ct}`;
+    const payloadM = `MKG3|M|v1|hyb|${encM.k}|${encM.iv}|${encM.ct}`;
+
+    this.lastPayloadP = payloadP;
+    this.lastPayloadM = payloadM;
+
+    document.getElementById("payloadDbg").value = `--- P ---\n${payloadP}\n\n--- M ---\n${payloadM}`;
+
+    let r1, r2;
+    try { r1 = this.renderQR(document.getElementById("qrP"), payloadP, "P", document.getElementById("qrPmeta")); }
+    catch(e){ document.getElementById("qrMode").value = "split"; r1 = this.renderQR(document.getElementById("qrP"), payloadP, "P", document.getElementById("qrPmeta")); }
+
+    try { r2 = this.renderQR(document.getElementById("qrM"), payloadM, "M", document.getElementById("qrMmeta")); }
+    catch(e){ document.getElementById("qrMode").value = "split"; r2 = this.renderQR(document.getElementById("qrM"), payloadM, "M", document.getElementById("qrMmeta")); }
+
+    qrOk.textContent = "QR-Codes erzeugt.";
+    qrInfo.textContent = `Person: ${r1.split ? r1.parts+" Teile" : "1 QR"} · Medizin: ${r2.split ? r2.parts+" Teile" : "1 QR"} · Split ist robuster.`;
+  },
+
+  /* Druck: Popup OHNE inline <script> im Template -> kein Script-Tag-Break möglich */
+  printQRs(){
+    let payloadP = (this.lastPayloadP || "").trim();
+    let payloadM = (this.lastPayloadM || "").trim();
+
+    if(!payloadP || !payloadM){
+      const dbg = document.getElementById("payloadDbg").value || "";
+      const pMatch = dbg.match(/--- P ---\n([\s\S]*?)\n\n--- M ---/);
+      const mMatch = dbg.match(/--- M ---\n([\s\S]*?)$/);
+      payloadP = (pMatch && pMatch[1]) ? pMatch[1].trim() : "";
+      payloadM = (mMatch && mMatch[1]) ? mMatch[1].trim() : "";
+    }
+
+    if(!payloadP || !payloadM){
+      alert("Bitte zuerst QR-Codes erzeugen (Button: 'Verschlüsselte QR erzeugen').");
+      return;
+    }
+
+    const size = Math.max(180, Math.min(900, parseInt(document.getElementById("qrSize").value || "380",10)));
+    const chunkLen = Math.max(200, Math.min(2000, parseInt(document.getElementById("chunkLen").value || "900",10)));
+    const mode = document.getElementById("qrMode").value;
+    const ecc  = document.getElementById("ecc").value;
+
+    const win = window.open("", "_blank");
+    if(!win){ alert("Popup blockiert. Bitte Popups erlauben."); return; }
+
+    const doc = win.document;
+    const now = new Date().toLocaleString();
+
+    doc.open();
+    doc.write(`<!doctype html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>QR Druck</title>
+<style>
+  body{ font-family: system-ui,-apple-system,Segoe UI,Roboto,Arial,sans-serif; margin:18px; color:#111; }
+  h1{ margin:0 0 6px; font-size:18px; color:#004E8A; }
+  .meta{ color:#555; font-size:12px; margin-bottom:14px; }
+  section{ margin-top:18px; }
+  h2{ font-size:14px; margin:0 0 10px; color:#004E8A; }
+  .grid{ display:flex; flex-wrap:wrap; gap:14px; }
+  .qr{ border:1px solid #ddd; padding:12px; border-radius:12px; }
+  .cap{ font-weight:800; margin-bottom:8px; font-size:12px; }
+  .box{ display:grid; place-items:center; }
+  @media print{ body{ margin:0; } }
+</style>
+</head>
+<body>
+  <h1>QR-Codes (verschlüsselt)</h1>
+  <div class="meta">Erzeugt: ${now}</div>
+
+  <section>
+    <h2>1. Person</h2>
+    <div class="grid" id="pGrid"></div>
+  </section>
+
+  <section>
+    <h2>2. Medizin</h2>
+    <div class="grid" id="mGrid"></div>
+  </section>
+</body>
+</html>`);
+    doc.close();
+
+    const loadScript = (src) => new Promise((resolve, reject) => {
+      const s = doc.createElement("script");
+      s.src = src;
+      s.onload = resolve;
+      s.onerror = reject;
+      doc.head.appendChild(s);
+    });
+
+    const splitInto = (str, maxLen) => {
+      const out=[]; for(let i=0;i<str.length;i+=maxLen) out.push(str.slice(i,i+maxLen));
+      return out;
+    };
+
+    const randId = () => {
+      try{
+        const b = new Uint8Array(10);
+        (win.crypto || crypto).getRandomValues(b);
+        let bin=""; for(const x of b) bin += String.fromCharCode(x);
+        return win.btoa(bin).replace(/\+/g,'-').replace(/\//g,'_').replace(/=+$/,'');
+      } catch {
+        return Math.random().toString(36).slice(2) + Math.random().toString(36).slice(2);
+      }
+    };
+
+    loadScript("https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js")
+      .then(() => {
+        const QRCode = win.QRCode;
+        const levelMap = {L:QRCode.CorrectLevel.L, M:QRCode.CorrectLevel.M, Q:QRCode.CorrectLevel.Q, H:QRCode.CorrectLevel.H};
+        const correctLevel = levelMap[ecc] || QRCode.CorrectLevel.M;
+
+        const addQR = (grid, title, text) => {
+          const wrap = doc.createElement("div");
+          wrap.className = "qr";
+          const cap = doc.createElement("div");
+          cap.className = "cap";
+          cap.textContent = title;
+          const box = doc.createElement("div");
+          box.className = "box";
+          wrap.appendChild(cap);
+          wrap.appendChild(box);
+          grid.appendChild(wrap);
+          new QRCode(box, { text, width:size, height:size, correctLevel });
+        };
+
+        const renderPayload = (gridId, typeLabel, payload) => {
+          const grid = doc.getElementById(gridId);
+          const needSplit = (mode === "split") || (mode === "auto" && payload.length > chunkLen);
+
+          if(!needSplit){
+            addQR(grid, "Single", payload);
+            return;
+          }
+
+          const id = randId();
+          const chunks = splitInto(payload, chunkLen);
+          const total = chunks.length;
+
+          chunks.forEach((chunk, i)=>{
+            const line = "MKG3S|" + typeLabel + "|" + id + "|" + (i+1) + "|" + total + "|" + chunk;
+            addQR(grid, "Teil " + (i+1) + "/" + total, line);
+          });
+        };
+
+        renderPayload("pGrid", "P", payloadP);
+        renderPayload("mGrid", "M", payloadM);
+
+        setTimeout(() => win.print(), 400);
+      })
+      .catch(() => win.alert("QRCode-Library konnte nicht geladen werden (offline / Netzwerk)."));
+  }
+};
+
+/* Wiring */
+window.addEventListener("DOMContentLoaded", () => {
+  App.init();
+
+  document.getElementById("lang").addEventListener("change", () => App.setLang());
+
+  document.getElementById("btnNext").addEventListener("click", (e)=>{ e.preventDefault(); App.validate(); });
+  document.getElementById("btnBack").addEventListener("click", (e)=>{ e.preventDefault(); App.nav(-1); });
+
+  document.getElementById("rc_pat").addEventListener("click", ()=>App.setRole("pat"));
+  document.getElementById("rc_rep").addEventListener("click", ()=>App.setRole("rep"));
+
+  document.getElementById("selfpayer").addEventListener("change", ()=>App.toggleIns());
+  document.getElementById("ins_type").addEventListener("change", ()=>{ App.toggleIns(); App.syncInsList(); });
+
+  document.getElementById("c_heart").addEventListener("change", ()=>App.toggle("sub_heart"));
+  document.getElementById("c_tumor").addEventListener("change", ()=>App.toggle("sub_tumor"));
+  document.getElementById("c_infec").addEventListener("change", ()=>App.toggle("sub_inf"));
+  document.getElementById("c_dia").addEventListener("change", ()=>App.toggle("sub_dia"));
+  document.getElementById("c_all").addEventListener("change", ()=>App.toggle("sub_all"));
+
+  /* ✅ FIX: NICHT mehr auf "-" zurücksetzen */
+  document.getElementById("sel_thinner").addEventListener("change", (e)=>{ App.addMedToText(e.target.value); });
+  document.getElementById("sel_bone").addEventListener("change", (e)=>{ App.addMedToText(e.target.value); });
+  document.getElementById("sel_dia_meds").addEventListener("change", (e)=>{ App.addMedToText(e.target.value); });
+
+  document.getElementById("btnMakeQR").addEventListener("click", ()=>App.generateEncryptedQRs());
+  document.getElementById("btnPrintQR").addEventListener("click", ()=>App.printQRs());
+});
+</script>
+
+<script>
+/* Language + legal init after first render */
+(function(){
+  const langSel = document.getElementById("lang");
+  langSel.value = "de";
+})();
+</script>
+
+</body>
+</html>
