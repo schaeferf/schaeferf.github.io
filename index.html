@@ -193,7 +193,7 @@ textarea.mono{font-family: ui-monospace,Consolas,monospace; min-height:120px;}
 <div class="app-header">
 <div class="brand">Städtisches Klinikum Karlsruhe<br/><small>Klinik für Mund-, Kiefer- und Gesichtschirurgie</small></div>
 
-<div class="header-right"><div class="ver-badge" id="verBadge">v1.9.9</div><select id="lang">
+<div class="header-right"><div class="ver-badge" id="verBadge">v1.9.10</div><select id="lang">
 <option selected="" value="de">🇩🇪 Deutsch</option>
 <option value="en">🇬🇧 English</option>
 </select></div></div><div class="info-box hidden" id="cryptoWarn" style="margin: 10px auto 0; max-width: 900px;"></div>
@@ -1506,8 +1506,14 @@ formatDate(el){
   },
 
   collect(){
-    const v = id => document.getElementById(id).value.trim();
-    const c = id => document.getElementById(id).checked;
+    const v = id => {
+      const el = document.getElementById(id);
+      return (el && typeof el.value === "string") ? el.value.trim() : "";
+    };
+    const c = id => {
+      const el = document.getElementById(id);
+      return !!(el && el.checked);
+    };
 
     const diagnoses = [];
     document.querySelectorAll(".sub-c:checked").forEach(e=>diagnoses.push(e.value));
