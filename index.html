@@ -193,7 +193,7 @@ textarea.mono{font-family: ui-monospace,Consolas,monospace; min-height:120px;}
 <div class="app-header">
 <div class="brand">Städtisches Klinikum Karlsruhe<br/><small>Klinik für Mund-, Kiefer- und Gesichtschirurgie</small></div>
 
-<div class="header-right"><div class="ver-badge" id="verBadge">v1.9.8</div><select id="lang">
+<div class="header-right"><div class="ver-badge" id="verBadge">v1.9.9</div><select id="lang">
 <option selected="" value="de">🇩🇪 Deutsch</option>
 <option value="en">🇬🇧 English</option>
 </select></div></div><div class="info-box hidden" id="cryptoWarn" style="margin: 10px auto 0; max-width: 900px;"></div>
@@ -1581,6 +1581,12 @@ formatDate(el){
       diagnoses,
       meds_plan: c("m_plan") ? 1 : 0,
       meds_text: v("meds_txt"),
+      m_none: c("m_none") ? 1 : 0,
+      thinner: (document.getElementById("sel_thinner") ? document.getElementById("sel_thinner").value : "") || null,
+      antiresorptives: [
+        (document.getElementById("sel_bone") ? document.getElementById("sel_bone").value : ""),
+        (document.getElementById("sel_bone_osteo") ? document.getElementById("sel_bone_osteo").value : "")
+      ].filter(Boolean),
       height_cm: v("h_cm") ? Number(v("h_cm").replace(",",".")) : null,
       weight_kg: v("w_kg") ? Number(v("w_kg").replace(",",".")) : null
     };
