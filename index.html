@@ -17,7 +17,7 @@
     body { background: var(--bg); font-family: system-ui, -apple-system, sans-serif; margin: 0; color: var(--text); padding-bottom: 110px; }
 
     /* Header & Stepper */
-    .app-header { background: #fff; padding: 1rem; border-bottom: 1px solid var(--border); display: flex; justify-content: space-between; align-items: center; position: sticky; top: 0; z-index: 100; }
+    .app-header { background: #fff; padding: 1rem; border-bottom: 1px solid var(--border); display:flex; justify-content: space-between; gap: 12px; align-items: center; position: sticky; top: 0; z-index: 100; }
     .brand { font-weight: 800; color: var(--primary); font-size: 0.95rem; line-height: 1.2; }
     
     .stepper { display: flex; justify-content: space-between; max-width: 900px; margin: 20px auto; padding: 0 20px; position: relative; }
@@ -176,16 +176,27 @@ textarea.mono{font-family: ui-monospace,Consolas,monospace; min-height:120px;}
 .dent-consent{
   font-weight:900;
 }
+
+.header-right{ display:flex; align-items:center; gap:10px; }
+.ver-badge{
+  font-size:12px;
+  color: var(--secondary);
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  padding: 6px 10px;
+  user-select:none;
+  opacity: 0.85;
+}
 </style>
 </head>
 <body>
 <div class="app-header">
 <div class="brand">Städtisches Klinikum Karlsruhe<br/><small>Klinik für Mund-, Kiefer- und Gesichtschirurgie</small></div>
-<select id="lang">
+
+<div class="header-right"><div class="ver-badge" id="verBadge">v1.9.8</div><select id="lang">
 <option selected="" value="de">🇩🇪 Deutsch</option>
 <option value="en">🇬🇧 English</option>
-</select>
-</div>
+</select></div></div><div class="info-box hidden" id="cryptoWarn" style="margin: 10px auto 0; max-width: 900px;"></div>
 <div class="stepper" id="stepper">
 <div class="step-idx active" data-step="1">1</div>
 <div class="step-idx" data-step="2">2</div>
@@ -202,142 +213,175 @@ textarea.mono{font-family: ui-monospace,Consolas,monospace; min-height:120px;}
 <div class="hint" data-t="enc_hint">
         Die nachfolgenden Angaben werden automatisch verschlüsselt und als QR-Code gespeichert.
       </div>
-<div id="cryptoWarn" class="hint" style="color: var(--danger); font-weight: 800; margin-top: 8px;"></div>
 <p class="hint" data-t="role_msg" style="margin-top:10px">Bitte wählen Sie Ihre Rolle:</p>
 <div class="role-card selected" id="rc_pat">
-<div class="role-icon"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path><circle cx="12" cy="7" r="4"></circle></svg></div>
+<div class="role-icon"><svg fill="none" height="24" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" viewbox="0 0 24 24" width="24"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path><circle cx="12" cy="7" r="4"></circle></svg></div>
 <div class="role-text" data-t="pat">Ich bin selbst Patient</div>
 </div>
 <div class="role-card" id="rc_rep">
-<div class="role-icon"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path><circle cx="9" cy="7" r="4"></circle><path d="M23 21v-2a4 4 0 0 0-3-3.87"></path><path d="M16 3.13a4 4 0 0 1 0 7.75"></path></svg></div>
+<div class="role-icon"><svg fill="none" height="24" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" viewbox="0 0 24 24" width="24"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path><circle cx="9" cy="7" r="4"></circle><path d="M23 21v-2a4 4 0 0 0-3-3.87"></path><path d="M16 3.13a4 4 0 0 1 0 7.75"></path></svg></div>
 <div class="role-text" data-t="rep">Ich bin Angehöriger / Betreuer</div>
 </div>
-<div class="rep-box hidden" id="rep_fields" style="margin-top:14px">
+<div class="hidden" id="rep_fields" style="margin-top:14px">
 <h5 style="margin:0 0 8px 0">Angaben zum Betreuer / Angehörigen</h5>
 <div class="check-clean" style="border:2px solid var(--primary); background: rgba(0,78,138,0.08);">
-  <input id="rep_addr_same" type="checkbox" onchange="App.repUI()"/>
-  <label for="rep_addr_same" style="margin:0">Gleiche Postanschrift wie Patient</label>
+<input checked="" id="rep_addr_same" type="checkbox"/>
+<label for="rep_addr_same" style="margin:0">Gleiche Postanschrift wie Patient</label>
 </div>
-
 <div class="row">
-  <div class="col-12">
-    <label>Beziehung*</label>
-    <select class="form-select" id="rep_rel">
-      <option value="">-</option>
-      <option value="parents">Eltern</option>
-      <option value="legal">Gesetzlicher Betreuer</option>
-      <option value="partner">Ehepartner / Partner</option>
-      <option value="child">Kind</option>
-      <option value="other">Sonstiges</option>
-    </select>
-  </div>
+<div class="col-12">
+<label>Beziehung*</label>
+<select class="form-select" id="rep_rel">
+<option value="">-</option>
+<option value="parents">Eltern</option>
+<option value="legal">Gesetzlicher Betreuer</option>
+<option value="partner">Ehepartner / Partner</option>
+<option value="child">Kind</option>
+<option value="other">Sonstiges</option>
+</select>
+</div>
+</div>
+<div class="row" style="margin-top:10px">
+<div class="col-6">
+<label>Vorname*</label>
+<input autocomplete="given-name" class="form-control" id="rep_fn" type="text"/>
+</div>
+<div class="col-6">
+<label>Nachname*</label>
+<input autocomplete="family-name" class="form-control" id="rep_ln" type="text"/>
+</div>
+</div>
+<div class="row">
+<div class="col-6">
+<label>Geburtsdatum</label>
+<input class="form-control" id="rep_dob_text" inputmode="numeric" oninput="App.formatDate(this)" placeholder="TT.MM.JJJJ" type="text"/>
+<input id="rep_dob" type="hidden"/>
+</div>
+<div class="col-6">
+<label>Telefon</label>
+<input autocomplete="tel" class="form-control" id="rep_phone" type="tel"/>
+</div>
+</div>
+<div class="row">
+<div class="col-12">
+<label>E-Mail</label>
+<input autocomplete="email" class="form-control" id="rep_email" type="email"/>
+</div>
+</div>
+<div class="hidden" id="rep_addr_box" style="margin-top:10px">
+<div class="row">
+<div class="col-8">
+<label>Straße*</label>
+<input autocomplete="street-address" class="form-control" id="rep_str" type="text"/>
+</div>
+<div class="col-4">
+<label>Hausnr.*</label>
+<input autocomplete="address-line2" class="form-control" id="rep_hno" type="text"/>
+</div>
+</div>
+<div class="row">
+<div class="col-4">
+<label>PLZ*</label>
+<input autocomplete="postal-code" class="form-control" id="rep_zip" inputmode="numeric" type="text"/>
+</div>
+<div class="col-8">
+<label>Ort*</label>
+<input autocomplete="address-level2" class="form-control" id="rep_city" type="text"/>
 </div>
 </div>
 </div>
-
+<div class="err" id="err1_rep"></div>
+</div>
+</div>
+<!-- end step1 -->
 <div class="step-card" id="step2">
-  <h4 data-t="personal">Persönliche Daten</h4>
-
-  <div class="row">
-    <div class="col-6">
-      <label data-t="salut">Anrede</label>
-      <select class="form-select" id="salut">
-        <option value="">-</option>
-        <option data-t="salut_mr" value="Herr">Herr</option>
-        <option data-t="salut_ms" value="Frau">Frau</option>
-        <option value="Divers">Divers</option>
-        <option data-t="salut_child" value="Kind">Kind</option>
-      </select>
-    </div>
-    <div class="col-6">
-      <label data-t="title">Titel</label>
-      <select class="form-select" id="title">
-        <option value="">-</option>
-        <option data-t="title_dr" value="Dr.">Dr.</option>
-        <option value="Dr. Dr.">Dr. Dr.</option>
-        <option data-t="title_prof" value="Prof.">Prof.</option>
-      </select>
-    </div>
-  </div>
-
-  <div class="row">
-    <div class="col-6"><label data-t="fn">Vorname*</label><input class="form-control" id="fn" type="text" autocomplete="given-name"/></div>
-    <div class="col-6"><label data-t="ln">Nachname*</label><input class="form-control" id="ln" type="text" autocomplete="family-name"/></div>
-  </div>
-
-  <label data-t="dob">Geburtsdatum*</label>
-  <input autocomplete="bday" class="form-control" id="dob_text" inputmode="numeric" maxlength="10" placeholder="TT.MM.JJJJ" type="text" oninput="App.formatDate(this)"/>
-  <div class="hint" data-t="dob_hint">Format: TT.MM.JJJJ</div>
-  <input id="dob" type="hidden"/>
-
-  <label data-t="phone">Telefon</label>
-  <input class="form-control" id="phone" type="tel" inputmode="tel" autocomplete="tel"/>
-
-  <label data-t="email">E-Mail</label>
-  <input class="form-control" id="email" type="email" inputmode="email" autocomplete="email"/>
-
-  <div class="err" id="err2"></div>
+<h4 data-t="personal">Persönliche Daten</h4>
+<div class="row">
+<div class="col-6">
+<label data-t="salut">Anrede</label>
+<select class="form-select" id="salut">
+<option value="">-</option>
+<option data-t="salut_mr" value="Herr">Herr</option>
+<option data-t="salut_ms" value="Frau">Frau</option>
+<option value="Divers">Divers</option>
+<option data-t="salut_child" value="Kind">Kind</option>
+</select>
 </div>
-
+<div class="col-6">
+<label data-t="title">Titel</label>
+<select class="form-select" id="title">
+<option value="">-</option>
+<option data-t="title_dr" value="Dr.">Dr.</option>
+<option value="Dr. Dr.">Dr. Dr.</option>
+<option data-t="title_prof" value="Prof.">Prof.</option>
+</select>
+</div>
+</div>
+<div class="row">
+<div class="col-6"><label data-t="fn">Vorname*</label><input autocomplete="given-name" class="form-control" id="fn" type="text"/></div>
+<div class="col-6"><label data-t="ln">Nachname*</label><input autocomplete="family-name" class="form-control" id="ln" type="text"/></div>
+</div>
+<label data-t="dob">Geburtsdatum*</label>
+<input autocomplete="bday" class="form-control" id="dob_text" inputmode="numeric" maxlength="10" oninput="App.formatDate(this)" placeholder="TT.MM.JJJJ" type="text"/>
+<div class="hint" data-t="dob_hint">Format: TT.MM.JJJJ</div>
+<input id="dob" type="hidden"/>
+<label data-t="phone">Telefon</label>
+<input autocomplete="tel" class="form-control" id="phone" inputmode="tel" type="tel"/>
+<label data-t="email">E-Mail</label>
+<input autocomplete="email" class="form-control" id="email" inputmode="email" type="email"/>
+<div class="err" id="err2"></div>
+</div>
 <div class="step-card" id="step3">
-  <h4 data-t="addr">Adresse</h4>
-  <div class="row">
-    <div class="col-6"><label data-t="street">Straße*</label><input class="form-control" id="str" type="text" autocomplete="address-line1"/></div>
-    <div class="col-6"><label data-t="hno">Hausnr.*</label><input class="form-control" id="hno" type="text"/></div>
-    <div class="col-4"><label data-t="zip">PLZ*</label><input class="form-control" id="zip" type="text" inputmode="numeric" autocomplete="postal-code"/></div>
-    <div class="col-8"><label data-t="city">Stadt*</label><input class="form-control" id="city" type="text" autocomplete="address-level2"/></div>
-  </div>
-  <div class="err" id="err3"></div>
+<h4 data-t="addr">Adresse</h4>
+<div class="row">
+<div class="col-6"><label data-t="street">Straße*</label><input autocomplete="address-line1" class="form-control" id="str" type="text"/></div>
+<div class="col-6"><label data-t="hno">Hausnr.*</label><input class="form-control" id="hno" type="text"/></div>
+<div class="col-4"><label data-t="zip">PLZ*</label><input autocomplete="postal-code" class="form-control" id="zip" inputmode="numeric" type="text"/></div>
+<div class="col-8"><label data-t="city">Stadt*</label><input autocomplete="address-level2" class="form-control" id="city" type="text"/></div>
 </div>
-
+<div class="err" id="err3"></div>
+</div>
 <div class="step-card" id="step4">
-  <h4 data-t="ins">Versicherung</h4>
-
-  <div class="check-clean">
-    <input id="selfpayer" type="checkbox" onchange="App.toggleIns()"/>
-    <label data-t="self" for="selfpayer">Ich bin Selbstzahler</label>
-  </div>
-
-  <div id="ins_box">
-    <label data-t="type">Art der Versicherung</label>
-    <select class="form-select" id="ins_type" onchange="App.toggleIns()">
-      <option data-t="gkv" value="gkv">Gesetzlich (GKV)</option>
-      <option data-t="pkv" value="pkv">Privat (PKV)</option>
-      <option value="behandlungsschein">Behandlungsschein / Behörde</option>
-      <option data-t="oth" value="oth">Sonstige</option>
-    </select>
-
-    <label id="ins_name_label" data-t="kasse">Name der Kasse</label>
-    <input class="form-control" id="ins_name" type="text"/>
-
-    <div id="gkv_panel" style="margin-top:10px">
-      <label data-t="stat">Status</label>
-      <select class="form-select" id="gkv_stat">
-        <option data-t="member" value="member">Mitglied</option>
-        <option data-t="family" value="family">Familienversichert</option>
-      </select>
-
-      <div class="check-clean">
-        <input id="gkv_add" type="checkbox"/>
-        <label data-t="add" for="gkv_add">Zusatzversicherung vorhanden</label>
-      </div>
-    </div>
-
-    <div id="pkv_panel" class="hidden" style="margin-top:10px">
-      <label data-t="tariff">PKV Tarif</label>
-      <select class="form-select" id="pkv_tar">
-        <option value="">-</option>
-        <option value="Standardtarif">Standardtarif</option>
-        <option value="Basistarif">Basistarif</option>
-        <option value="Studententarif">Studententarif</option>
-      </select>
-
-      <div class="check-clean">
-        <input id="pkv_bei" type="checkbox"/>
-        <label data-t="beihilfe" for="pkv_bei">Beihilfe</label>
-      </div>
-    </div>
-  </div>
+<h4 data-t="ins">Versicherung</h4>
+<div class="check-clean">
+<input id="selfpayer" onchange="App.toggleIns()" type="checkbox"/>
+<label data-t="self" for="selfpayer">Ich bin Selbstzahler</label>
+</div>
+<div id="ins_box">
+<label data-t="type">Art der Versicherung</label>
+<select class="form-select" id="ins_type" onchange="App.toggleIns()">
+<option data-t="gkv" value="gkv">Gesetzlich (GKV)</option>
+<option data-t="pkv" value="pkv">Privat (PKV)</option>
+<option value="behandlungsschein">Behandlungsschein / Behörde</option>
+<option data-t="oth" value="oth">Sonstige</option>
+</select>
+<label data-t="kasse" id="ins_name_label">Name der Kasse</label>
+<input class="form-control" id="ins_name" type="text"/>
+<div id="gkv_panel" style="margin-top:10px">
+<label data-t="stat">Status</label>
+<select class="form-select" id="gkv_stat">
+<option data-t="member" value="member">Mitglied</option>
+<option data-t="family" value="family">Familienversichert</option>
+</select>
+<div class="check-clean">
+<input id="gkv_add" type="checkbox"/>
+<label data-t="add" for="gkv_add">Zusatzversicherung vorhanden</label>
+</div>
+</div>
+<div class="hidden" id="pkv_panel" style="margin-top:10px">
+<label data-t="tariff">PKV Tarif</label>
+<select class="form-select" id="pkv_tar">
+<option value="">-</option>
+<option value="Standardtarif">Standardtarif</option>
+<option value="Basistarif">Basistarif</option>
+<option value="Studententarif">Studententarif</option>
+</select>
+<div class="check-clean">
+<input id="pkv_bei" type="checkbox"/>
+<label data-t="beihilfe" for="pkv_bei">Beihilfe</label>
+</div>
+</div>
+</div>
 </div>
 <div class="step-card" id="step5">
 <h4 data-t="dis">Erkrankungen &amp; Allergien</h4>
@@ -463,22 +507,19 @@ textarea.mono{font-family: ui-monospace,Consolas,monospace; min-height:120px;}
 <textarea class="form-control mono" id="diag_txt" placeholder="Besonderheiten..."></textarea>
 </div>
 <div class="step-card" id="step6">
-  <h4 data-t="meds_title">Medikamente</h4>
-
-  <div class="check-clean" style="border:2px solid var(--success); background: rgba(39,174,96,0.08);">
-    <input id="m_none" type="checkbox" checked onchange="App.toggleMeds()"/>
-    <label for="m_none" style="margin:0"><b>Keine regelmäßige Medikamenteneinnahme</b></label>
-  </div>
-
-  <div id="meds_area" class="hidden">
-    <div class="check-clean">
-      <input id="m_plan" type="checkbox"/>
-      <label data-t="plan_exists" for="m_plan">Medikamentenplan liegt vor</label>
-    </div>
-
-    <label data-t="med_list">Liste</label>
-    <textarea class="form-control mono" id="meds_txt" placeholder="Medikamente als Text …"></textarea>
-  </div>
+<h4 data-t="meds_title">Medikamente</h4>
+<div class="check-clean" style="border:2px solid var(--success); background: rgba(39,174,96,0.08);">
+<input checked="" id="m_none" onchange="App.toggleMeds()" type="checkbox"/>
+<label for="m_none" style="margin:0"><b>Keine regelmäßige Medikamenteneinnahme</b></label>
+</div>
+<div class="hidden" id="meds_area">
+<div class="check-clean">
+<input id="m_plan" type="checkbox"/>
+<label data-t="plan_exists" for="m_plan">Medikamentenplan liegt vor</label>
+</div>
+<label data-t="med_list">Liste</label>
+<textarea class="form-control mono" id="meds_txt" placeholder="Medikamente als Text …"></textarea>
+</div>
 </div>
 <div class="step-card" id="step7">
 <h4 data-t="priv">Datenschutz</h4>
@@ -497,110 +538,93 @@ textarea.mono{font-family: ui-monospace,Consolas,monospace; min-height:120px;}
 <div class="err" id="err7"></div>
 </div>
 <div class="step-card" id="step8">
-  <h4>Datenschutz – Übermittlung</h4>
-
-  
-  <div class="legal-always" style="margin-top:8px;">
-    <div class="legal-always-head">Info: Details zur Übermittlung</div>
-    <div class="legal-box legal-box-compact" id="lt3"></div>
-  </div>
-
-  <!-- Legacy flags (für Payload-Kompatibilität) -->
-  <input id="share_dent" type="checkbox" class="hidden"/>
-  <input id="no_dent" type="checkbox" class="hidden"/>
-
-  <div class="choice-grid" style="margin-top:12px;">
-    <label class="choice-card" id="share_dent_card">
-      <input type="radio" name="dent_transfer_mode" id="dent_mode_yes" value="yes"/>
-      <div class="choice-title">Datenübermittlung an Hauszahnarzt</div>
-      <div class="choice-sub">Wir übermitteln Ihren Brief/Befund an Ihren Hauszahnarzt.</div>
-    </label>
-
-    <label class="choice-card" id="no_dent_card">
-      <input type="radio" name="dent_transfer_mode" id="dent_mode_no" value="no" checked/>
-      <div class="choice-title">Keine Datenübermittlung</div>
-      <div class="choice-sub">Ich habe keinen Hauszahnarzt oder wünsche keine Weitergabe.</div>
-    </label>
-  </div>
-
-  
-  <div id="dent_consent_text" class="dent-consent hidden" style="margin-top:12px;">
+<h4>Datenschutz – Übermittlung</h4>
+<div class="legal-always" style="margin-top:8px;">
+<div class="legal-always-head">Info: Details zur Übermittlung</div>
+<div class="legal-box legal-box-compact" id="lt3"></div>
+</div>
+<!-- Legacy flags (für Payload-Kompatibilität) -->
+<input class="hidden" id="share_dent" type="checkbox"/>
+<input class="hidden" id="no_dent" type="checkbox"/>
+<div class="choice-grid" style="margin-top:12px;">
+<label class="choice-card" id="share_dent_card">
+<input id="dent_mode_yes" name="dent_transfer_mode" type="radio" value="yes"/>
+<div class="choice-title">Datenübermittlung an Hauszahnarzt</div>
+<div class="choice-sub">Wir übermitteln Ihren Brief/Befund an Ihren Hauszahnarzt.</div>
+</label>
+<label class="choice-card" id="no_dent_card">
+<input checked="" id="dent_mode_no" name="dent_transfer_mode" type="radio" value="no"/>
+<div class="choice-title">Keine Datenübermittlung</div>
+<div class="choice-sub">Ich habe keinen Hauszahnarzt oder wünsche keine Weitergabe.</div>
+</label>
+</div>
+<div class="dent-consent hidden" id="dent_consent_text" style="margin-top:12px;">
     Ich stimme der Datenübermittlung an nachfolgende Behandler zu.
   </div>
-
-  <div id="dent_no_warning" class="warn-red hidden" style="margin-top:12px;">
-    <div style="font-weight:900; margin-bottom:6px;">Auf Ihren Wunsch erfolgt keine Datenweitergabe an Ihren Hauszahnarzt.</div>
-    <div style="margin-bottom:8px;">Bitte beachten Sie die daraus resultierenden Konsequenzen:</div>
-    <ul style="margin:0; padding-left:18px;">
-      <li><b>Kein Datentransfer:</b> Es werden keine Befunde oder Röntgenaufnahmen übermittelt.</li>
-      <li><b>Weiterbehandlung:</b> Eine Nachsorge bzw. Weiterbehandlung bei Ihrem Hauszahnarzt ist in der Regel dennoch zwingend erforderlich.</li>
-      <li><b>Eigenverantwortung:</b> Sie sind selbst dafür verantwortlich, Ihren Zahnarzt über die hier erfolgten Maßnahmen zu informieren.</li>
-    </ul>
-  </div>
-
-  <div id="dent_wrap" class="hidden" style="margin-top:14px;">
-    <!-- Legacy flag für Payload -->
-    <input id="dent_manual" type="checkbox" class="hidden"/>
-
-    <div class="hint">Bitte wählen Sie den Hauszahnarzt aus.</div>
-
-    <div id="dent_selected" class="dent-card hidden" style="margin-top:10px;">
-      <div class="dent-card-title">Ausgewählt</div>
-      <div id="dent_selected_body" class="dent-card-body"></div>
-      <div class="row" style="margin-top:10px;">
-        <div class="col-6">
-          <button type="button" class="btn secondary" id="dent_change" style="width:100%;">Ändern</button>
-        </div>
-        <div class="col-6">
-          <button type="button" class="btn secondary" id="dent_clear" style="width:100%;">Auswahl löschen</button>
-        </div>
-      </div>
-    </div>
-
-    <div id="dent_search_block" style="margin-top:10px;">
-      <input autocomplete="off" class="form-control" id="dent_name" placeholder="Name / Praxis / Ort (Tippen zum Suchen)…" type="text"/>
-      <input id="dent_id" type="hidden"/>
-
-      <div class="suggest hidden" id="dent_results" style="margin-top:8px;"></div>
-
-      <button type="button" class="btn secondary hidden" id="dent_manual_btn" style="margin-top:10px; width:100%;">Zahnarzt nicht gefunden – manuell eingeben</button>
-
-      <div class="card-soft hidden" id="dent_manual_box" style="margin-top:10px; padding:10px; border:1px solid var(--border); border-radius:12px;">
-        <div class="row">
-          <div class="col-6">
-            <label>Name</label>
-            <input class="form-control" id="dent_manual_name" type="text" placeholder="Name"/>
-          </div>
-          <div class="col-6">
-            <label>Ort</label>
-            <input class="form-control" id="dent_manual_ort" type="text" placeholder="Ort (optional)"/>
-          </div>
-        </div>
-        <div class="row" style="margin-top:8px;">
-          <div class="col-12">
-            <label>Straße</label>
-            <input class="form-control" id="dent_manual_str" type="text" placeholder="Straße (optional)"/>
-          </div>
-        </div>
-        <div class="row" style="margin-top:8px;">
-          <div class="col-12">
-            <label>PLZ</label>
-            <input class="form-control" id="dent_manual_plz" type="text" inputmode="numeric" placeholder="PLZ (optional)"/>
-          </div>
-        </div>
-        <div class="row" style="margin-top:8px;">
-          <div class="col-12">
-            <label>Telefon</label>
-            <input class="form-control" id="dent_manual_tel" type="tel" inputmode="tel" placeholder="Telefon (optional)"/>
-          </div>
-        </div>
-      </div>
-    </div>
-  </div>
-
-  <div class="err" id="err8"></div>
+<div class="warn-red hidden" id="dent_no_warning" style="margin-top:12px;">
+<div style="font-weight:900; margin-bottom:6px;">Auf Ihren Wunsch erfolgt keine Datenweitergabe an Ihren Hauszahnarzt.</div>
+<div style="margin-bottom:8px;">Bitte beachten Sie die daraus resultierenden Konsequenzen:</div>
+<ul style="margin:0; padding-left:18px;">
+<li><b>Kein Datentransfer:</b> Es werden keine Befunde oder Röntgenaufnahmen übermittelt.</li>
+<li><b>Weiterbehandlung:</b> Eine Nachsorge bzw. Weiterbehandlung bei Ihrem Hauszahnarzt ist in der Regel dennoch zwingend erforderlich.</li>
+<li><b>Eigenverantwortung:</b> Sie sind selbst dafür verantwortlich, Ihren Zahnarzt über die hier erfolgten Maßnahmen zu informieren.</li>
+</ul>
 </div>
-
+<div class="hidden" id="dent_wrap" style="margin-top:14px;">
+<!-- Legacy flag für Payload -->
+<input class="hidden" id="dent_manual" type="checkbox"/>
+<div class="hint">Bitte wählen Sie den Hauszahnarzt aus.</div>
+<div class="dent-card hidden" id="dent_selected" style="margin-top:10px;">
+<div class="dent-card-title">Ausgewählt</div>
+<div class="dent-card-body" id="dent_selected_body"></div>
+<div class="row" style="margin-top:10px;">
+<div class="col-6">
+<button class="btn secondary" id="dent_change" style="width:100%;" type="button">Ändern</button>
+</div>
+<div class="col-6">
+<button class="btn secondary" id="dent_clear" style="width:100%;" type="button">Auswahl löschen</button>
+</div>
+</div>
+</div>
+<div id="dent_search_block" style="margin-top:10px;">
+<input autocomplete="off" class="form-control" id="dent_name" placeholder="Name / Praxis / Ort (Tippen zum Suchen)…" type="text"/>
+<input id="dent_id" type="hidden"/>
+<div class="suggest hidden" id="dent_results" style="margin-top:8px;"></div>
+<button class="btn secondary hidden" id="dent_manual_btn" style="margin-top:10px; width:100%;" type="button">Zahnarzt nicht gefunden – manuell eingeben</button>
+<div class="card-soft hidden" id="dent_manual_box" style="margin-top:10px; padding:10px; border:1px solid var(--border); border-radius:12px;">
+<div class="row">
+<div class="col-6">
+<label>Name</label>
+<input class="form-control" id="dent_manual_name" placeholder="Name" type="text"/>
+</div>
+<div class="col-6">
+<label>Ort</label>
+<input class="form-control" id="dent_manual_ort" placeholder="Ort (optional)" type="text"/>
+</div>
+</div>
+<div class="row" style="margin-top:8px;">
+<div class="col-12">
+<label>Straße</label>
+<input class="form-control" id="dent_manual_str" placeholder="Straße (optional)" type="text"/>
+</div>
+</div>
+<div class="row" style="margin-top:8px;">
+<div class="col-12">
+<label>PLZ</label>
+<input class="form-control" id="dent_manual_plz" inputmode="numeric" placeholder="PLZ (optional)" type="text"/>
+</div>
+</div>
+<div class="row" style="margin-top:8px;">
+<div class="col-12">
+<label>Telefon</label>
+<input class="form-control" id="dent_manual_tel" inputmode="tel" placeholder="Telefon (optional)" type="tel"/>
+</div>
+</div>
+</div>
+</div>
+</div>
+<div class="err" id="err8"></div>
+</div>
 <div class="step-card" id="step9">
 <h4 data-t="thx">Vielen Dank!</h4>
 <button class="btn secondary" data-t="adv_show" id="btnAdv" type="button">⚙️ Erweiterte Optionen</button>
@@ -1179,13 +1203,15 @@ const App = {
 
   init(){
     const warn = document.getElementById("cryptoWarn");
-if(warn){
-  if(!window.isSecureContext || !crypto?.subtle){
-    warn.textContent = "Hinweis: Für Verschlüsselung ist HTTPS (oder localhost) nötig.";
-  } else {
-    warn.textContent = "";
-  }
-}
+    if(warn){
+      if(!window.isSecureContext || !crypto?.subtle){
+        warn.textContent = "Hinweis: Für Verschlüsselung ist HTTPS (oder localhost) nötig.";
+        warn.classList.remove("hidden");
+      } else {
+        warn.textContent = "";
+        warn.classList.add("hidden");
+      }
+    }
 
     this.fillDatalists();
     this.setLang();
@@ -1253,7 +1279,7 @@ try{
 },
 
   setLang(){
-    const lang = (document.getElementById("lang")?.value || "de");
+    const lang = document.getElementById("lang").value;
     const t = I18N[lang] || I18N.de;
 
     document.querySelectorAll("[data-t]").forEach(el=>{
@@ -1271,7 +1297,7 @@ try{
   updateAdvLabel(){
     const btn = document.getElementById("btnAdv");
     if(!btn) return;
-    const lang = (document.getElementById("lang")?.value || "de");
+    const lang = document.getElementById("lang").value;
     const t = I18N[lang] || I18N.de;
     btn.textContent = this.advOpen ? (t.adv_hide || "Erweiterte Optionen ausblenden") : (t.adv_show || "Erweiterte Optionen");
   },
@@ -1368,14 +1394,7 @@ nav(dir){
 
 
   validate(){
-    const v = id => {
-      const el = document.getElementById(id);
-      return el && typeof el.value === "string" ? el.value.trim() : "";
-    };
-    const c = id => {
-      const el = document.getElementById(id);
-      return !!(el && el.checked);
-    };
+    const v = id => document.getElementById(id).value.trim();
     const err2 = document.getElementById("err2");
     const err3 = document.getElementById("err3");
     const err7 = document.getElementById("err7");
@@ -1406,7 +1425,7 @@ nav(dir){
 
     if(this.step===2 && (!v("fn") || !v("ln") || !v("dob"))){ err2.textContent="Pflichtfelder fehlen."; return; }
     if(this.step===3 && (!v("str") || !v("hno") || !v("zip") || !v("city"))){ err3.textContent="Adresse unvollständig."; return; }
-    if(this.step===7 && (!(document.getElementById("chk_priv")?.checked) || !(document.getElementById("chk_req")?.checked))){
+    if(this.step===7 && (!document.getElementById("chk_priv").checked || !document.getElementById("chk_req").checked)){
       err7.textContent="Zustimmung fehlt.";
       return;
     }
@@ -1446,7 +1465,8 @@ formatDate(el){
   else if(v.length > 2) v = v.slice(0,2) + '.' + v.slice(2);
   el.value = v;
 
-  const h = byId('dob');
+  const hidId = (el.id === 'rep_dob_text') ? 'rep_dob' : 'dob';
+  const h = byId(hidId);
   if(!h) return;
   if(v.length === 10){
     const dd = parseInt(v.slice(0,2),10);
@@ -1486,14 +1506,8 @@ formatDate(el){
   },
 
   collect(){
-    const v = id => {
-      const el = document.getElementById(id);
-      return el && typeof el.value === "string" ? el.value.trim() : "";
-    };
-    const c = id => {
-      const el = document.getElementById(id);
-      return !!(el && el.checked);
-    };
+    const v = id => document.getElementById(id).value.trim();
+    const c = id => document.getElementById(id).checked;
 
     const diagnoses = [];
     document.querySelectorAll(".sub-c:checked").forEach(e=>diagnoses.push(e.value));
@@ -1587,7 +1601,7 @@ formatDate(el){
     };
 
     return {
-      meta:{ v:1, ts:new Date().toISOString(), lang: (document.getElementById("lang")?.value || "de") },
+      meta:{ v:1, ts:new Date().toISOString(), lang: document.getElementById("lang").value },
       person,
       representative, insurance, medical, consents
     };
@@ -2012,6 +2026,5 @@ document.getElementById("btnMakeQR").addEventListener("click", ()=>App.generateE
 <datalist id="kassen_gkv"></datalist>
 <datalist id="kassen_pkv"></datalist>
 <datalist id="kassen_oth"></datalist>
-
-</body>
+</div></body>
 </html>
