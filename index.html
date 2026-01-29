@@ -193,7 +193,7 @@ textarea.mono{font-family: ui-monospace,Consolas,monospace; min-height:120px;}
 <div class="app-header">
 <div class="brand">Städtisches Klinikum Karlsruhe<br/><small>Klinik für Mund-, Kiefer- und Gesichtschirurgie</small></div>
 
-<div class="header-right"><div class="ver-badge" id="verBadge">v1.9.10</div><select id="lang">
+<div class="header-right"><div class="ver-badge" id="verBadge">v1.9.12</div><select id="lang">
 <option selected="" value="de">🇩🇪 Deutsch</option>
 <option value="en">🇬🇧 English</option>
 </select></div></div><div class="info-box hidden" id="cryptoWarn" style="margin: 10px auto 0; max-width: 900px;"></div>
@@ -325,6 +325,18 @@ textarea.mono{font-family: ui-monospace,Consolas,monospace; min-height:120px;}
 <input autocomplete="bday" class="form-control" id="dob_text" inputmode="numeric" maxlength="10" oninput="App.formatDate(this)" placeholder="TT.MM.JJJJ" type="text"/>
 <div class="hint" data-t="dob_hint">Format: TT.MM.JJJJ</div>
 <input id="dob" type="hidden"/>
+
+<div class="row">
+  <div class="col-6">
+    <label>Körpergröße (cm)</label>
+    <input class="form-control" id="h_cm" inputmode="decimal" placeholder="z. B. 189" type="text"/>
+  </div>
+  <div class="col-6">
+    <label>Körpergewicht (kg)</label>
+    <input class="form-control" id="w_kg" inputmode="decimal" placeholder="z. B. 85" type="text"/>
+  </div>
+</div>
+
 <label data-t="phone">Telefon</label>
 <input autocomplete="tel" class="form-control" id="phone" inputmode="tel" type="tel"/>
 <label data-t="email">E-Mail</label>
@@ -1497,7 +1509,27 @@ formatDate(el){
   const none = !!(document.getElementById("m_none") && document.getElementById("m_none").checked);
   const area = document.getElementById("meds_area");
   if(area) area.classList.toggle("hidden", none);
+  // Wenn "Keine Medikation" aktiv ist, räume auto-gefüllte Felder auf, um Widersprüche zu vermeiden.
+  if(none){
+    const meds = document.getElementById("meds_txt");
+    if(meds) meds.value = "";
+    const mp = document.getElementById("m_plan");
+    if(mp) mp.checked = false;
+    const resetSel = (id)=>{ const el=document.getElementById(id); if(el) el.value=""; };
+    resetSel("sel_thinner");
+    resetSel("sel_bone");
+    resetSel("sel_bone_osteo");
+    resetSel("sel_dia_meds");
+  }
 },
+
+  ensureMedsOn(){
+    const mNone = document.getElementById("m_none");
+    if(mNone && mNone.checked){
+      mNone.checked = false;
+      this.toggleMeds();
+    }
+  },
 
   addMedToText(val){
     if(!val) return;
@@ -1959,12 +1991,25 @@ document.getElementById("selfpayer").addEventListener("change", ()=>App.toggleIn
   document.getElementById("c_osteo").addEventListener("change", ()=>App.toggle("sub_osteo"));
   document.getElementById("c_all").addEventListener("change", ()=>App.toggle("sub_all"));
 
-  /* ✅ FIX: NICHT mehr auf "-" zurücksetzen */
-  document.getElementById("sel_thinner").addEventListener("change", (e)=>{ App.addMedToText(e.target.value); });
-  document.getElementById("sel_bone").addEventListener("change", (e)=>{ App.addMedToText(e.target.value); });
+  /* ✅ FIX: Auswahl von Blutverdünner/Antiresorptiva/Diabetes-Meds zählt als Medikation.
+   -> "Keine regelmäßige Medikamenteneinnahme" wird automatisch deaktiviert.
+   -> Die Auswahl wird (falls nicht schon vorhanden) in die Medikationsliste übernommen.
+*/
+  const wireMedSelect = (id)=>{
+    const el = document.getElementById(id);
+    if(!el) return;
+    el.addEventListener("change", (e)=>{
+      const val = (e && e.target && typeof e.target.value === "string") ? e.target.value.trim() : "";
+      if(!val) return;
+      App.ensureMedsOn();
+      App.addMedToText(val);
+    });
+  };
+  wireMedSelect("sel_thinner");
+  wireMedSelect("sel_bone");
+  wireMedSelect("sel_bone_osteo");
+  wireMedSelect("sel_dia_meds");
 
-  document.getElementById("sel_bone_osteo").addEventListener("change", (e)=>{ App.addMedToText(e.target.value); });
-  document.getElementById("sel_dia_meds").addEventListener("change", (e)=>{ App.addMedToText(e.target.value); });
 
     // Step 8: Datenübermittlung (Hauszahnarzt) – eindeutige Entscheidung (Radio-Cards)
   const shareDent = document.getElementById("share_dent");   // legacy payload
