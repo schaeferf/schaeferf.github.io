@@ -1,0 +1,261 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>InstruTrack MKG - Demo</title>
+    <style>
+        :root {
+            --klinik-blue: #004a99;
+            --success-green: #28a745;
+            --bg-light: #f4f7f9;
+        }
+
+        body {
+            font-family: 'Segoe UI', Arial, sans-serif;
+            background-color: var(--bg-light);
+            margin: 0;
+            padding: 20px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
+
+        .container {
+            width: 100%;
+            max-width: 600px;
+            background: white;
+            padding: 20px;
+            border-radius: 12px;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.1);
+        }
+
+        header {
+            text-align: center;
+            border-bottom: 2px solid var(--klinik-blue);
+            margin-bottom: 20px;
+            padding-bottom: 10px;
+        }
+
+        header h1 {
+            color: var(--klinik-blue);
+            font-size: 22px;
+            margin: 0;
+        }
+
+        header p {
+            margin: 5px 0;
+            font-size: 14px;
+            color: #666;
+        }
+
+        .step {
+            margin-bottom: 25px;
+        }
+
+        label {
+            display: block;
+            font-weight: bold;
+            margin-bottom: 8px;
+            color: #333;
+        }
+
+        input[type="text"] {
+            width: 100%;
+            padding: 12px;
+            box-sizing: border-box;
+            border: 2px solid #ddd;
+            border-radius: 6px;
+            font-size: 16px;
+        }
+
+        #camera-container {
+            width: 100%;
+            height: 300px;
+            background: #000;
+            border-radius: 8px;
+            overflow: hidden;
+            position: relative;
+            margin-bottom: 10px;
+        }
+
+        video {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+        }
+
+        canvas {
+            display: none;
+        }
+
+        #photo-preview {
+            width: 100%;
+            display: none;
+            border-radius: 8px;
+            border: 2px solid var(--success-green);
+        }
+
+        .btn {
+            width: 100%;
+            padding: 15px;
+            border: none;
+            border-radius: 8px;
+            font-size: 18px;
+            font-weight: bold;
+            cursor: pointer;
+            transition: transform 0.1s;
+        }
+
+        .btn-primary {
+            background-color: var(--klinik-blue);
+            color: white;
+        }
+
+        .btn-success {
+            background-color: var(--success-green);
+            color: white;
+            margin-top: 10px;
+        }
+
+        .btn:active {
+            transform: scale(0.98);
+        }
+
+        #log-status {
+            margin-top: 20px;
+            padding: 15px;
+            background: #e9f7ef;
+            border-left: 5px solid var(--success-green);
+            display: none;
+        }
+
+        .footer-info {
+            font-size: 12px;
+            color: #999;
+            text-align: center;
+            margin-top: 30px;
+        }
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <header>
+        <h1>InstruTrack MKG</h1>
+        <p>Städtisches Klinikum Karlsruhe - Beweissicherung AEMP</p>
+    </header>
+
+    <div class="step">
+        <label for="barcode">1. Barcode scannen (ID)</label>
+        <input type="text" id="barcode" placeholder="Z.B. BENEX-EXT-2024-001" autocomplete="off">
+    </div>
+
+    <div class="step">
+        <label>2. Instrument / Set fotografieren</label>
+        <div id="camera-container">
+            <video id="video" autoplay playsinline></video>
+        </div>
+        <img id="photo-preview" alt="Vorschau">
+        <button class="btn btn-primary" id="capture-btn">Foto aufnehmen</button>
+        <button class="btn" id="retake-btn" style="display:none; background:#666; color:white; margin-top:5px;">Neu aufnehmen</button>
+    </div>
+
+    <div class="step">
+        <button class="btn btn-success" id="send-btn" disabled>Protokoll an AEMP & Einkauf senden</button>
+    </div>
+
+    <div id="log-status">
+        <strong>✓ Protokoll erstellt & versendet!</strong><br>
+        <small>Empfänger: Herr Brand (AEMP), Frau Margos (Einkauf)</small><br>
+        <small id="timestamp-info"></small>
+    </div>
+
+    <div class="footer-info">
+        Demo-Modus | MKG-IT Infrastruktur Projekt
+    </div>
+</div>
+
+<canvas id="canvas"></canvas>
+
+<script>
+    const video = document.getElementById('video');
+    const canvas = document.getElementById('canvas');
+    const captureBtn = document.getElementById('capture-btn');
+    const retakeBtn = document.getElementById('retake-btn');
+    const photoPreview = document.getElementById('photo-preview');
+    const sendBtn = document.getElementById('send-btn');
+    const barcodeInput = document.getElementById('barcode');
+    const logStatus = document.getElementById('log-status');
+    const cameraContainer = document.getElementById('camera-container');
+
+    // Zugriff auf die Kamera
+    navigator.mediaDevices.getUserMedia({ video: { facingMode: "environment" } })
+        .then(stream => {
+            video.srcObject = stream;
+        })
+        .catch(err => {
+            console.error("Kamerafehler: ", err);
+            alert("Kamera konnte nicht aktiviert werden. Bitte Berechtigungen prüfen.");
+        });
+
+    // Foto aufnehmen
+    captureBtn.addEventListener('click', () => {
+        const context = canvas.getContext('2d');
+        canvas.width = video.videoWidth;
+        canvas.height = video.videoHeight;
+        context.drawImage(video, 0, 0, canvas.width, canvas.height);
+        
+        // Overlay Zeitstempel im Foto
+        context.font = "20px Arial";
+        context.fillStyle = "red";
+        context.fillText(new Date().toLocaleString() + " - MKG KA", 20, 40);
+
+        const dataUrl = canvas.toDataURL('image/png');
+        photoPreview.src = dataUrl;
+        
+        // UI Wechsel
+        cameraContainer.style.display = 'none';
+        captureBtn.style.display = 'none';
+        photoPreview.style.display = 'block';
+        retakeBtn.style.display = 'block';
+        checkReady();
+    });
+
+    // Neu aufnehmen
+    retakeBtn.addEventListener('click', () => {
+        cameraContainer.style.display = 'block';
+        captureBtn.style.display = 'block';
+        photoPreview.style.display = 'none';
+        retakeBtn.style.display = 'none';
+        sendBtn.disabled = true;
+    });
+
+    // Check ob bereit zum Senden
+    barcodeInput.addEventListener('input', checkReady);
+
+    function checkReady() {
+        if (barcodeInput.value.length > 3 && photoPreview.style.display === 'block') {
+            sendBtn.disabled = false;
+        }
+    }
+
+    // Senden simulieren
+    sendBtn.addEventListener('click', () => {
+        const now = new Date();
+        document.getElementById('timestamp-info').innerText = "Zeitstempel: " + now.toLocaleString();
+        logStatus.style.display = 'block';
+        sendBtn.innerText = "Übermittelt!";
+        sendBtn.disabled = true;
+        
+        // In einer echten App würde hier der API-Call an PowerAutomate oder den Server erfolgen
+        console.log("Datenpaket gesendet: ", {
+            id: barcodeInput.value,
+            time: now.toISOString(),
+            image: photoPreview.src
+        });
+    });
+</script>
+
+</body>
+</html>
