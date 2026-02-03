@@ -3,28 +3,40 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Instrumententracker MKG v3.0</title>
+    <title>Instrumententracker MKG v3.1</title>
     <script src="https://unpkg.com/html5-qrcode"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
     
     <style>
-        :root { --klinik-blue: #004a99; --accent-blue: #e6eff8; --success-green: #28a745; --text-dark: #333; }
-        body { font-family: 'Segoe UI', Roboto, sans-serif; background-color: #f0f2f5; padding: 15px; display: flex; flex-direction: column; align-items: center; color: var(--text-dark); }
-        .container { width: 100%; max-width: 500px; background: white; padding: 25px; border-radius: 20px; box-shadow: 0 15px 35px rgba(0,0,0,0.1); }
-        header { text-align: center; margin-bottom: 25px; border-bottom: 3px solid var(--klinik-blue); padding-bottom: 10px; }
-        header h1 { color: var(--klinik-blue); margin: 0; font-size: 24px; }
-        .step { margin-bottom: 20px; padding: 18px; border-radius: 12px; background: #fff; border: 1px solid #e0e0e0; }
-        .active { border: 2px solid var(--klinik-blue); background: var(--accent-blue); }
-        label { display: block; font-weight: 600; margin-bottom: 10px; }
-        select, input { width: 100%; padding: 12px; border-radius: 8px; border: 1px solid #ccc; font-size: 16px; margin-bottom: 10px; }
-        #reader, #video { width: 100%; border-radius: 10px; background: #000; }
-        .gallery { display: grid; grid-template-columns: repeat(3, 1fr); gap: 5px; margin-top: 10px; }
-        .gallery img { width: 100%; height: 80px; object-fit: cover; border-radius: 5px; border: 1px solid #ddd; }
-        .btn { width: 100%; padding: 15px; border: none; border-radius: 10px; font-size: 16px; font-weight: bold; cursor: pointer; margin-top: 10px; }
-        .btn-blue { background: var(--klinik-blue); color: white; }
-        .btn-green { background: var(--success-green); color: white; }
+        :root { 
+            --primary: #004E8A; /* Exakter Decoder-Blauton */
+            --bg: #f4f7f9; 
+            --card: #ffffff;
+            --border: #dcdfe6; 
+            --text: #2c3e50; 
+        }
+        body { font-family: system-ui, -apple-system, sans-serif; background: var(--bg); color: var(--text); padding: 15px; display: flex; flex-direction: column; align-items: center; }
+        .container { width: 100%; max-width: 500px; background: var(--card); padding: 25px; border-radius: 12px; box-shadow: 0 4px 12px rgba(0,0,0,0.1); }
+        
+        header { text-align: left; border-bottom: 2px solid var(--primary); margin-bottom: 20px; padding-bottom: 10px; }
+        header h1 { color: var(--primary); margin: 0; font-size: 20px; text-transform: uppercase; letter-spacing: 1px; }
+        header small { color: #666; font-size: 12px; }
+
+        .step { margin-bottom: 15px; padding: 15px; border: 1px solid var(--border); border-radius: 8px; }
+        .active { border-color: var(--primary); box-shadow: 0 0 5px rgba(0,78,138,0.2); }
+        
+        label { display: block; font-weight: bold; margin-bottom: 8px; font-size: 13px; text-transform: uppercase; color: var(--primary); }
+        select, .btn { width: 100%; padding: 12px; border-radius: 8px; font-size: 15px; border: 1px solid var(--border); }
+        
+        #reader, #video { width: 100%; border-radius: 8px; background: #000; margin-top: 10px; }
+        .gallery { display: grid; grid-template-columns: repeat(4, 1fr); gap: 5px; margin-top: 10px; }
+        .gallery img { width: 100%; height: 60px; object-fit: cover; border-radius: 4px; border: 1px solid var(--border); }
+        
+        .btn-primary { background: var(--primary); color: white; border: none; font-weight: bold; cursor: pointer; }
+        .btn-success { background: #1b5e20; color: white; border: none; font-weight: bold; }
+        .btn:disabled { background: #ccc; cursor: not-allowed; }
+        
         .hidden { display: none; }
-        .badge { background: var(--klinik-blue); color: white; padding: 2px 8px; border-radius: 10px; font-size: 12px; float: right; }
     </style>
 </head>
 <body>
@@ -32,13 +44,13 @@
 <div class="container">
     <header>
         <h1>Instrumententracker</h1>
-        <p>Städtisches Klinikum Karlsruhe | MKG</p>
+        <small>Städtisches Klinikum Karlsruhe · MKG-Chirurgie</small>
     </header>
 
-    <div class="step active" id="step0">
-        <label for="erfasser">Dokumentiert von:</label>
+    <div class="step active">
+        <label>Dokumentiert von</label>
         <select id="erfasser">
-            <option value="">-- Bitte wählen --</option>
+            <option value="">Bitte wählen...</option>
             <option value="Christiane Holst">Christiane Holst</option>
             <option value="Florian Schäfer">Florian Schäfer</option>
             <option value="Nadine Baumann">Nadine Baumann</option>
@@ -46,145 +58,136 @@
         </select>
     </div>
 
-    <div class="step" id="step1">
+    <div class="step" id="step_scan">
         <label>1. Identifikation (Barcode)</label>
         <div id="reader"></div>
-        <div id="barcode-display" style="text-align:center; font-weight:bold; color:var(--klinik-blue); padding:10px; display:none;">
-            ID: <span id="scanned-id">-</span>
-        </div>
-        <button class="btn btn-blue" id="start-scan-btn">Scanner starten</button>
+        <div id="barcode_res" style="display:none; text-align:center; font-weight:bold; padding:10px; color:var(--primary);"></div>
+        <button class="btn btn-primary" id="btn_scan">Scanner starten</button>
     </div>
 
-    <div class="step" id="step2">
-        <label>2. Zustandsdokumentation <span class="badge" id="photo-count">0 Bilder</span></label>
+    <div class="step" id="step_photo">
+        <label>2. Zustandsdokumentation</label>
         <video id="video" autoplay playsinline class="hidden"></video>
         <canvas id="canvas" class="hidden"></canvas>
         <div class="gallery" id="gallery"></div>
-        <button class="btn btn-blue hidden" id="capture-btn">Foto aufnehmen</button>
-        <button class="btn btn-blue hidden" id="add-photo-btn" style="background:#666;">Weiteres Foto +</button>
+        <button class="btn btn-primary hidden" id="btn_capture">Foto aufnehmen</button>
+        <button class="btn hidden" id="btn_next" style="background:#6c757d; color:white;">Weiteres Bild +</button>
     </div>
 
-    <div class="step" id="step3">
-        <button class="btn btn-green" id="pdf-btn" disabled>Prozessbericht PDF erzeugen</button>
-    </div>
+    <button class="btn btn-success" id="btn_pdf" disabled>Bericht generieren (PDF)</button>
 </div>
 
 <script>
     const { jsPDF } = window.jspdf;
-    let html5QrCode;
-    let capturedImages = [];
-    let currentBarcode = null;
+    let scanner, capturedImages = [], currentID = null;
 
-    const startScanBtn = document.getElementById('start-scan-btn');
-    const captureBtn = document.getElementById('capture-btn');
-    const addPhotoBtn = document.getElementById('add-photo-btn');
+    const btnScan = document.getElementById('btn_scan');
+    const btnCapture = document.getElementById('btn_capture');
+    const btnNext = document.getElementById('btn_next');
+    const btnPdf = document.getElementById('btn_pdf');
     const video = document.getElementById('video');
-    const gallery = document.getElementById('gallery');
-    const pdfBtn = document.getElementById('pdf-btn');
-    const erfasserSelect = document.getElementById('erfasser');
+    const erfasser = document.getElementById('erfasser');
 
-    // SCANNER STARTEN
-    startScanBtn.addEventListener('click', () => {
-        if(!erfasserSelect.value) { alert("Bitte zuerst Erfasser wählen!"); return; }
-        startScanBtn.classList.add('hidden');
-        document.getElementById('step1').classList.add('active');
-        html5QrCode = new Html5Qrcode("reader");
-        html5QrCode.start({ facingMode: "environment" }, { fps: 15, qrbox: 250 }, (text) => {
-            currentBarcode = text;
-            document.getElementById('scanned-id').innerText = text;
-            document.getElementById('barcode-display').style.display = 'block';
-            html5QrCode.stop().then(() => {
+    btnScan.onclick = () => {
+        if(!erfasser.value) return alert("Erfasser wählen!");
+        btnScan.classList.add('hidden');
+        scanner = new Html5Qrcode("reader");
+        scanner.start({ facingMode: "environment" }, { fps: 15, qrbox: 250 }, (txt) => {
+            currentID = txt;
+            document.getElementById('barcode_res').innerText = "ID: " + txt;
+            document.getElementById('barcode_res').style.display = "block";
+            scanner.stop().then(() => {
                 document.getElementById('reader').classList.add('hidden');
-                initCamera();
+                startCam();
             });
         });
-    });
+    };
 
-    // KAMERA INITIALISIEREN
-    function initCamera() {
-        document.getElementById('step2').classList.add('active');
+    function startCam() {
         video.classList.remove('hidden');
-        captureBtn.classList.remove('hidden');
-        navigator.mediaDevices.getUserMedia({ video: { facingMode: "environment" } })
-            .then(stream => { video.srcObject = stream; });
+        btnCapture.classList.remove('hidden');
+        navigator.mediaDevices.getUserMedia({ video: { facingMode: "environment" } }).then(s => video.srcObject = s);
     }
 
-    // FOTO AUFNEHMEN
-    captureBtn.addEventListener('click', () => {
+    btnCapture.onclick = () => {
         const canvas = document.getElementById('canvas');
-        canvas.width = video.videoWidth;
-        canvas.height = video.videoHeight;
+        canvas.width = video.videoWidth; canvas.height = video.videoHeight;
         canvas.getContext('2d').drawImage(video, 0, 0);
-        const imgData = canvas.toDataURL('image/jpeg', 0.7);
+        capturedImages.push(canvas.toDataURL('image/jpeg', 0.8));
         
-        capturedImages.push(imgData);
-        updateGallery();
+        const img = document.createElement('img');
+        img.src = capturedImages[capturedImages.length-1];
+        document.getElementById('gallery').appendChild(img);
         
         video.classList.add('hidden');
-        captureBtn.classList.add('hidden');
-        addPhotoBtn.classList.remove('hidden');
-        pdfBtn.disabled = false;
-    });
+        btnCapture.classList.add('hidden');
+        btnNext.classList.remove('hidden');
+        btnPdf.disabled = false;
+    };
 
-    // NOCH EIN FOTO
-    addPhotoBtn.addEventListener('click', () => {
+    btnNext.onclick = () => {
         video.classList.remove('hidden');
-        captureBtn.classList.remove('hidden');
-        addPhotoBtn.classList.add('hidden');
-    });
+        btnCapture.classList.remove('hidden');
+        btnNext.classList.add('hidden');
+    };
 
-    function updateGallery() {
-        gallery.innerHTML = "";
-        capturedImages.forEach(src => {
-            const img = document.createElement('img');
-            img.src = src;
-            gallery.appendChild(img);
-        });
-        document.getElementById('photo-count').innerText = `${capturedImages.length} Bilder`;
-    }
-
-    // PDF GENERIEREN
-    pdfBtn.addEventListener('click', () => {
+    btnPdf.onclick = () => {
         const doc = new jsPDF();
-        const erfasser = erfasserSelect.value;
         const now = new Date().toLocaleString('de-DE');
-
-        // Design-Elemente
-        doc.setFillColor(0, 74, 153);
-        doc.rect(0, 0, 210, 40, 'F');
-        doc.setTextColor(255, 255, 255);
-        doc.setFontSize(20);
-        doc.text("Prozessbericht Instrumenten-Logistik", 20, 25);
         
-        doc.setFontSize(10);
-        doc.text(`Städtisches Klinikum Karlsruhe | Erfasser: ${erfasser}`, 20, 33);
-
-        doc.setTextColor(40);
-        doc.setFontSize(12);
-        doc.text("Fotodokumentation Instrumentenausgang", 20, 55);
-        doc.text(`Zeitpunkt: ${now}`, 20, 62);
+        // --- DECODER STYLE PDF ---
+        // Blue Header
+        doc.setFillColor(0, 78, 138); // #004E8A
+        doc.rect(0, 0, 210, 35, 'F');
+        
+        doc.setTextColor(255, 255, 255);
+        doc.setFontSize(18);
         doc.setFont("helvetica", "bold");
-        doc.text(`Instrumenten-ID: ${currentBarcode}`, 20, 69);
-        doc.setDrawColor(0, 74, 153);
-        doc.line(20, 72, 190, 72);
+        doc.text("PROZESSBERICHT INSTRUMENTEN-LOGISTIK", 15, 20);
+        
+        doc.setFontSize(9);
+        doc.setFont("helvetica", "normal");
+        doc.text("Städtisches Klinikum Karlsruhe · Mund-, Kiefer- und Gesichtschirurgie", 15, 28);
 
-        // Bilder im PDF platzieren
-        let yPos = 80;
-        capturedImages.forEach((img, index) => {
-            if (yPos > 200) { // Neue Seite falls voll
-                doc.addPage();
-                yPos = 20;
-            }
-            doc.addImage(img, 'JPEG', 20, yPos, 170, 100);
-            yPos += 110;
+        // Metadata Section
+        doc.setTextColor(0, 78, 138);
+        doc.setFontSize(10);
+        doc.setFont("helvetica", "bold");
+        doc.text("DOKUMENTATIONSDATEN", 15, 45);
+        doc.setDrawColor(220, 223, 230);
+        doc.line(15, 47, 195, 47);
+
+        doc.setTextColor(44, 62, 80);
+        doc.setFontSize(10);
+        doc.setFont("helvetica", "normal");
+        doc.text(`Erfasser: ${erfasser.value}`, 15, 55);
+        doc.text(`Zeitpunkt: ${now}`, 15, 60);
+        doc.setFont("helvetica", "bold");
+        doc.text(`Instrumenten-ID: ${currentID}`, 15, 65);
+
+        // Photo Section Title
+        doc.setTextColor(0, 78, 138);
+        doc.text("FOTODOKUMENTATION INSTRUMENTENAUSGANG", 15, 78);
+        doc.line(15, 80, 195, 80);
+
+        // Images
+        let y = 85;
+        capturedImages.forEach((img, i) => {
+            if(y > 220) { doc.addPage(); y = 20; }
+            doc.setDrawColor(200);
+            doc.rect(14.5, y - 0.5, 171, 101); // Border
+            doc.addImage(img, 'JPEG', 15, y, 170, 100);
+            y += 110;
         });
 
-        doc.setFontSize(9);
-        doc.setTextColor(150);
-        doc.text("Interne Dokumentation zur Qualitätssicherung MKG-Chirurgie.", 20, 285);
+        // Legal Footer
+        doc.setFontSize(8);
+        doc.setTextColor(100);
+        doc.text("Interne Dokumentation zur Qualitätssicherung beim Verlassen der MKG-Chirurgie.", 15, 285);
+        doc.text(`Seite 1 - Erstellt mit MKG-Tracker v3.1`, 180, 285, {align: 'right'});
 
-        doc.save(`Prozessbericht_${erfasser.split(' ')[1]}_${currentBarcode}.pdf`);
-    });
+        doc.save(`MKG_Logistik_${currentID}.pdf`);
+    };
 </script>
 
 </body>
